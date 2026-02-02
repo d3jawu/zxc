@@ -2,28 +2,7 @@ import ollama from "ollama";
 import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
-import { readFileSync } from "fs";
-
-const messages: Message[] = [
-  {
-    role: "system",
-    content: `You are an expert coding assistant. You help users with coding tasks by reading files, executing commands, editing code, and writing new files.
-  Your context window is small, so be as concise as possible in both thinking and responding.
-  Available tools:
-  - read: Read file contents
-  - bash: Execute bash commands
-  - edit: Make surgical edits to files
-  - write: Create or overwrite files
-  Guidelines:
-  - Use bash for file operations like ls, grep, find
-  - Use read to examine files before editing
-  - Use edit for precise changes (old text must match exactly)
-  - Use write only for new files or complete rewrites
-  - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did
-  - Be concise in your responses
-  - Show file paths clearly when working with files`,
-  },
-];
+import { readFileSync, readdirSync } from "fs";
 
 const tools: Tool[] = [
   {
@@ -44,11 +23,46 @@ const tools: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "list",
+      description:
+        "List files and directories at a given path. If no path is provided, lists files in the current directory.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Path to the directory to list.",
+          },
+        },
+      },
+    },
+  },
 ];
 
-const TOOLS: Record<string, (arg: {}) => string> = {
+const messages: Message[] = [
+  {
+    role: "system",
+    content: `You are an expert coding assistant. You help users with coding tasks by reading files, executing commands, editing code, and writing new files.
+  Your context window is small, so be as concise as possible in both thinking and responding.
+  Available tools:
+  - read: Read file contents
+
+  Guidelines:
+  - Use bash for file operations like ls, grep, find
+  - Use read to examine files before editing
+  - Use edit for precise changes (old text must match exactly)
+  - Use write only for new files or complete rewrites
+  - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did
+  - Be concise in your responses
+  - Show file paths clearly when working with files`,
+  },
+];
+
+const TOOLS: Record<string, Function> = {
   read: ({ file }: { file: string }) => {
-    console.log(`READ ${file}`);
     const contents = readFileSync(file).toString();
     const lines = contents.split("\n");
     console.log(lines.slice(0, 10).join("\n"));
@@ -56,6 +70,16 @@ const TOOLS: Record<string, (arg: {}) => string> = {
       console.log("...");
     }
     return contents;
+  },
+  list: ({ path }: { path?: string }) => {
+    if (!path) {
+      path = process.cwd();
+    }
+
+    const files = readdirSync(path);
+    console.log(files);
+
+    return readdirSync(path).join(",");
   },
 };
 
@@ -75,12 +99,16 @@ while (true) {
     stream: true,
     messages,
     tools,
-    think: false,
+    think: true,
   });
 
   let fullResponse = "";
   let mode: "thinking" | "response" | "tool" | undefined;
   for await (const part of response) {
+    if (part.done) {
+      continue;
+    }
+
     fullResponse += part.message.content;
     if (part.message.thinking) {
       if (mode !== "thinking") {
@@ -98,7 +126,7 @@ while (true) {
         process.stdout.write(
           `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}: ${JSON.stringify(toolCall.function.arguments)}\n`,
         );
-        const toolResponse = (
+        const toolResponse: string = (
           TOOLS[toolCall.function.name] ||
           (() => {
             console.log(
@@ -130,5 +158,6 @@ while (true) {
   process.stdout.write("\n");
   if (fullResponse) {
     messages.push({ role: "assistant", content: fullResponse });
+    process.stdout.write("\n");
   }
 }
