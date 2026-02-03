@@ -3,6 +3,7 @@ import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { readFileSync, readdirSync, writeFileSync } from "fs";
+import { spawnSync } from "bun";
 
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
@@ -92,6 +93,24 @@ const tools: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "bash",
+      description:
+        "Execute a bash command. Use this to run shell commands directly.",
+      parameters: {
+        type: "object",
+        required: ["command"],
+        properties: {
+          command: {
+            type: "string",
+            description: "The command (with arguments) to be run",
+          },
+        },
+      },
+    },
+  },
 ];
 
 const messages: Message[] = [
@@ -162,6 +181,24 @@ const TOOLS: Record<string, Function> = {
 
     writeFileSync(file, contents, { encoding: "utf-8" });
   },
+  bash: ({ command }: { command: string }) => {
+    console.log(`EXECUTE: ${command}\n`);
+    try {
+      const proc = spawnSync(command.split(" "));
+      if (proc.exitCode === 0) {
+        console.log(proc.stdout.toString());
+        return proc.stdout.toString();
+      } else {
+        console.log(`Error: status ${proc.exitCode}`);
+        console.log(proc.stdout.toString());
+        console.log(proc.stderr.toString());
+        return proc.stderr.toString();
+      }
+    } catch (e) {
+      console.log(e);
+      console.log(JSON.stringify(e));
+    }
+  },
 };
 
 const userPrompt = `${chalk.blueBright(userInfo().username)}:`;
@@ -205,7 +242,7 @@ while (true) {
         process.stdout.write(
           `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}: ${JSON.stringify(toolCall.function.arguments)}\n`,
         );
-        const toolResponse: string = (
+        const toolResponse: string = await (
           TOOLS[toolCall.function.name] ||
           (() => {
             console.log(
@@ -230,6 +267,8 @@ while (true) {
       }
       process.stdout.write(part.message.content);
     } else {
+      console.log("Warning: unrecognized message");
+      console.log(part);
     }
   }
   process.stdout.write("\n");
