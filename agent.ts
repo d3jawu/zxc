@@ -2,7 +2,7 @@ import { Ollama } from "ollama";
 import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, writeFileSync } from "fs";
 
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
@@ -44,30 +44,80 @@ const tools: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "edit",
+      description:
+        "Replace all occurrences of a string in a file with another string. Use this for precise text replacement in files.",
+      parameters: {
+        type: "object",
+        required: ["file", "replace", "replacement"],
+        properties: {
+          file: {
+            type: "string",
+            description: "Path to the file to edit.",
+          },
+          replace: {
+            type: "string",
+            description: "The exact string to match and replace.",
+          },
+          replacement: {
+            type: "string",
+            description: "The string to replace the 'replace' string with.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write",
+      description:
+        "Write content to a specified file. Use this for creating new files or overwriting existing ones.",
+      parameters: {
+        type: "object",
+        required: ["file", "contents"],
+        properties: {
+          file: {
+            type: "string",
+            description: "Path to the file to be written",
+          },
+          contents: {
+            type: "string",
+            description: "The content to be written to the file",
+          },
+        },
+      },
+    },
+  },
 ];
 
 const messages: Message[] = [
   {
     role: "system",
-    content: `You are an expert coding assistant. You help users with coding tasks by reading files, executing commands, editing code, and writing new files.
+    content: `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
   Your context window is small, so be as concise as possible in both thinking and responding.
   Available tools:
   - read: Read file contents
+  - list: List files in directory
+  - edit: Make changes to an existing file
+  - write: Create or overwrite a file
 
   Guidelines:
-  - Use bash for file operations like ls, grep, find
   - Use read to examine files before editing
   - Use edit for precise changes (old text must match exactly)
   - Use write only for new files or complete rewrites
   - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did
-  - Be concise in your responses
+  - Be very concise in your responses
   - Show file paths clearly when working with files`,
   },
 ];
 
 const TOOLS: Record<string, Function> = {
   read: ({ file }: { file: string }) => {
-    const contents = readFileSync(file).toString();
+    const contents = readFileSync(file, "utf-8");
     const lines = contents.split("\n");
     console.log(lines.slice(0, 10).join("\n"));
     if (lines.length > 10) {
@@ -85,12 +135,39 @@ const TOOLS: Record<string, Function> = {
 
     return readdirSync(path).join(",");
   },
+  edit: ({
+    file,
+    replace,
+    replacement,
+  }: {
+    file: string;
+    replace: string;
+    replacement: string;
+  }) => {
+    const content = readFileSync(file, "utf-8");
+
+    console.log(
+      `REPLACE:\n...\n${replace}\n...\n\nWITH:\n...\n${replacement}\n...\n`,
+    );
+
+    writeFileSync(file, content.replace(replace, replacement), {
+      encoding: "utf-8",
+    });
+  },
+  write: ({ file, contents }: { file: string; contents: string }) => {
+    const lines = contents.split("\n");
+    console.log(
+      `WRITE:\n${lines.slice(0, 10).join("\n")}\n${lines.length > 10 ? "..." : ""}\n`,
+    );
+
+    writeFileSync(file, contents, { encoding: "utf-8" });
+  },
 };
 
 const userPrompt = `${chalk.blueBright(userInfo().username)}:`;
-let shouldPrompt = true; // Switched off when the assistant is talking to tools.
+let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
-  if (shouldPrompt) {
+  if (mode !== "tool") {
     let line = null;
     while (!line) {
       line = prompt(userPrompt);
@@ -107,7 +184,6 @@ while (true) {
   });
 
   let fullResponse = "";
-  let mode: "thinking" | "response" | "tool" | undefined;
   for await (const part of response) {
     if (part.done) {
       continue;
@@ -123,7 +199,6 @@ while (true) {
       }
 
       process.stdout.write(chalk.gray(part.message.thinking));
-      shouldPrompt = true;
     } else if (part.message.tool_calls) {
       messages.push(part.message);
       for (const toolCall of part.message.tool_calls) {
@@ -146,7 +221,6 @@ while (true) {
         });
       }
       mode = "tool";
-      shouldPrompt = false;
     } else if (part.message.content) {
       if (mode !== "response") {
         process.stdout.write(
@@ -155,7 +229,6 @@ while (true) {
         mode = "response";
       }
       process.stdout.write(part.message.content);
-      shouldPrompt = true;
     } else {
     }
   }
