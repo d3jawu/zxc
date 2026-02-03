@@ -1,8 +1,12 @@
-import ollama from "ollama";
+import { Ollama } from "ollama";
 import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { readFileSync, readdirSync } from "fs";
+
+const ollama = new Ollama({
+  host: process.env["OLLAMA_API_BASE"] || undefined,
+});
 
 const tools: Tool[] = [
   {
