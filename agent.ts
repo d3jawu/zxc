@@ -123,6 +123,7 @@ const messages: Message[] = [
   - list: List files in directory
   - edit: Make changes to an existing file
   - write: Create or overwrite a file
+  - bash: Execute commands
 
   Guidelines:
   - Use read to examine files before editing
@@ -201,19 +202,44 @@ const TOOLS: Record<string, Function> = {
   },
 };
 
-const userPrompt = `${chalk.blueBright(userInfo().username)}:`;
+const MODEL = "qwen3:14b";
+
 let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
   if (mode !== "tool") {
+    const tokenCount = messages
+      .map((m) => m.content)
+      .join(" ")
+      .split(" ").length;
+    let contextLength: number | undefined;
+    {
+      const ps = await ollama.ps();
+      const model = ps.models.find((model) => model.model === MODEL);
+      if (
+        model &&
+        "context_length" in model &&
+        typeof model.context_length === "number"
+      ) {
+        contextLength = model.context_length;
+      }
+    }
+
+    const contextString = !!contextLength
+      ? (parseFloat((tokenCount / contextLength).toFixed(3)) * 100).toFixed(1) +
+        "%"
+      : `${tokenCount} tokens`;
+
     let line = null;
     while (!line) {
-      line = prompt(userPrompt);
+      line = prompt(
+        `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}:`,
+      );
     }
     messages.push({ role: "user", content: line });
   }
 
   const response = await ollama.chat({
-    model: "qwen3:14b",
+    model: MODEL,
     stream: true,
     messages,
     tools,
