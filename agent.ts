@@ -5,6 +5,8 @@ import { userInfo } from "os";
 import { readFileSync, readdirSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 
+const MODEL = "qwen3-coder:30b";
+
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
 });
@@ -113,6 +115,12 @@ const tools: Tool[] = [
   },
 ];
 
+// Reusable function to get confirmation or denial reason
+function denyReason(): string | null {
+  const input = prompt("Press Enter to confirm, or provide a reason for denial: ");
+  return input?.trim() || null;
+}
+
 const messages: Message[] = [
   {
     role: "system",
@@ -176,9 +184,9 @@ const TOOLS: Record<string, Function> = {
       return "String to replace was not found. Try another";
     }
 
-    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
-    if (confirm !== "y" && confirm !== "yes") {
-      return "Operation denied. Try a different input or tool.";
+    const reason = denyReason();
+    if (reason !== null) {
+      return `Edit operation denied. Reason: ${reason}`;
     }
 
     writeFileSync(file, content.replace(target, replacement), {
@@ -186,9 +194,9 @@ const TOOLS: Record<string, Function> = {
     });
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
-    if (confirm !== "y" && confirm !== "yes") {
-      return "Operation denied. Try a different input or tool.";
+    const reason = denyReason();
+    if (reason !== null) {
+      return `Write operation denied. Reason: ${reason}`;
     }
     const lines = contents.split("\n");
     console.log(
@@ -198,9 +206,9 @@ const TOOLS: Record<string, Function> = {
     writeFileSync(file, contents, { encoding: "utf-8" });
   },
   bash: ({ command }: { command: string }) => {
-    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
-    if (confirm !== "y" && confirm !== "yes") {
-      return "Operation denied. Try a different input or tool.";
+    const reason = denyReason();
+    if (reason !== null) {
+      return `Bash operation denied. Reason: ${reason}`;
     }
 
     console.log(`EXECUTE: ${command}\n`);
@@ -221,8 +229,6 @@ const TOOLS: Record<string, Function> = {
     }
   },
 };
-
-const MODEL = "qwen3:32b";
 
 let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
@@ -263,7 +269,7 @@ while (true) {
     stream: true,
     messages,
     tools,
-    think: true,
+    think: false,
   });
 
   let fullResponse = "";
