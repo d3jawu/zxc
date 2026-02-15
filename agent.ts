@@ -53,13 +53,13 @@ const tools: Tool[] = [
         "Replace all occurrences of a string in a file with another string. Use this for precise text replacement in files.",
       parameters: {
         type: "object",
-        required: ["file", "replace", "replacement"],
+        required: ["file", "target", "replacement"],
         properties: {
           file: {
             type: "string",
             description: "Path to the file to edit.",
           },
-          replace: {
+          target: {
             type: "string",
             description: "The exact string to match and replace.",
           },
@@ -118,6 +118,7 @@ const messages: Message[] = [
     role: "system",
     content: `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
   Your context window is small, so be as concise as possible in both thinking and responding.
+  If you ever use the word "wait" while thinking, stop thinking and begin responding instead.
   Available tools:
   - read: Read file contents
   - list: List files in directory
@@ -157,24 +158,38 @@ const TOOLS: Record<string, Function> = {
   },
   edit: ({
     file,
-    replace,
+    target,
     replacement,
   }: {
     file: string;
-    replace: string;
+    target: string;
     replacement: string;
   }) => {
     const content = readFileSync(file, "utf-8");
 
     console.log(
-      `REPLACE:\n...\n${replace}\n...\n\nWITH:\n...\n${replacement}\n...\n`,
+      `REPLACE:\n...\n${target}\n...\n\nWITH:\n...\n${replacement}\n...\n`,
     );
 
-    writeFileSync(file, content.replace(replace, replacement), {
+    if (!content.includes(target)) {
+      console.log("Error: String to replace was not found.");
+      return "String to replace was not found. Try another";
+    }
+
+    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
+    if (confirm !== "y" && confirm !== "yes") {
+      return "Operation denied. Try a different input or tool.";
+    }
+
+    writeFileSync(file, content.replace(target, replacement), {
       encoding: "utf-8",
     });
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
+    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
+    if (confirm !== "y" && confirm !== "yes") {
+      return "Operation denied. Try a different input or tool.";
+    }
     const lines = contents.split("\n");
     console.log(
       `WRITE:\n${lines.slice(0, 10).join("\n")}\n${lines.length > 10 ? "..." : ""}\n`,
@@ -183,6 +198,11 @@ const TOOLS: Record<string, Function> = {
     writeFileSync(file, contents, { encoding: "utf-8" });
   },
   bash: ({ command }: { command: string }) => {
+    const confirm = prompt("Confirm (y/n): ")?.toLowerCase();
+    if (confirm !== "y" && confirm !== "yes") {
+      return "Operation denied. Try a different input or tool.";
+    }
+
     console.log(`EXECUTE: ${command}\n`);
     try {
       const proc = spawnSync(command.split(" "));
@@ -202,7 +222,7 @@ const TOOLS: Record<string, Function> = {
   },
 };
 
-const MODEL = "qwen3:14b";
+const MODEL = "qwen3:32b";
 
 let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
