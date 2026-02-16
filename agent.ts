@@ -21,6 +21,10 @@ const messages: Message[] = [
   - edit: Replace text to changes to an existing file
   - write: Create or overwrite a file
   - bash: Execute commands
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call>
 
   Guidelines:
   - Do not leave comments in code, instead strive to make the code itself self-explanatory
@@ -34,10 +38,9 @@ const messages: Message[] = [
   },
 ];
 
-let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
+let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
   if (mode !== "tool") {
-    mode = "prompt";
     const tokenCount = messages
       .map((m) => m.content)
       .join(" ")
@@ -81,7 +84,6 @@ while (true) {
   let fullResponse = "";
   for await (const part of response) {
     if (part.done) {
-      mode = undefined;
       continue;
     }
 
