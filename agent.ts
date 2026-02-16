@@ -2,7 +2,7 @@ import { Ollama } from "ollama";
 import type { Message } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
-import { tools, TOOLS } from "./tools.ts";
+import { definitions, tools } from "./tools.ts";
 
 const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
 
@@ -77,7 +77,7 @@ while (true) {
     model: MODEL,
     stream: true,
     messages,
-    tools,
+    tools: definitions,
     think: false,
   });
 
@@ -104,7 +104,7 @@ while (true) {
           `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}: ${JSON.stringify(toolCall.function.arguments)}\n`,
         );
         const toolResponse: string = await (
-          TOOLS[toolCall.function.name] ||
+          tools[toolCall.function.name] ||
           (() => {
             console.log(
               `${chalk.red("error")}: Attempted to call invalid tool ${toolCall.function.name}`,

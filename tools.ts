@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 
-export const tools: Tool[] = [
+export const definitions: Tool[] = [
   {
     type: "function",
     function: {
@@ -106,7 +106,7 @@ export const tools: Tool[] = [
   },
 ];
 
-export const TOOLS: Record<string, Function> = {
+export const tools: Record<string, Function> = {
   read: ({ file }: { file: string }) => {
     const contents = readFileSync(file, "utf-8");
     const lines = contents.split("\n");
@@ -156,14 +156,15 @@ export const TOOLS: Record<string, Function> = {
     });
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    const reason = denyReason();
-    if (reason !== null) {
-      return `Write operation denied. Reason: ${reason}`;
-    }
     const lines = contents.split("\n");
     console.log(
       `WRITE:\n${lines.slice(0, 10).join("\n")}\n${lines.length > 10 ? "..." : ""}\n`,
     );
+
+    const reason = denyReason();
+    if (reason !== null) {
+      return `Write operation denied. Reason: ${reason}`;
+    }
 
     writeFileSync(file, contents, { encoding: "utf-8" });
   },
