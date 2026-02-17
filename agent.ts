@@ -29,7 +29,7 @@ For each function call, return a json object with function name and arguments wi
   Guidelines:
   - Do not leave comments in code, instead strive to make the code itself self-explanatory
   - Use read to examine files before editing
-  - Use edit for precise changes (old text must match exactly including indentation)
+  - Use edit for precise changes (target text must match exactly)
   - Do not end output until the user request has been addressed
   - Use write only for new files or complete rewrites
   - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did

@@ -109,20 +109,12 @@ export const definitions: Tool[] = [
 export const tools: Record<string, Function> = {
   read: ({ file }: { file: string }) => {
     const contents = readFileSync(file, "utf-8");
-    const lines = contents.split("\n");
-    console.log(lines.slice(0, 10).join("\n"));
-    if (lines.length > 10) {
-      console.log("...");
-    }
     return contents;
   },
   list: ({ path }: { path?: string }) => {
     if (!path) {
       path = process.cwd();
     }
-
-    const files = readdirSync(path);
-    console.log(files);
 
     return readdirSync(path).join(",");
   },
@@ -142,8 +134,8 @@ export const tools: Record<string, Function> = {
     );
 
     if (!content.includes(target)) {
-      console.log("Error: String to replace was not found.");
-      return "String to replace was not found. Try another";
+      console.log("Error: Target string not found.");
+      return "String to replace was not found. Ensure target matches exactly.";
     }
 
     const reason = denyReason();
@@ -157,9 +149,8 @@ export const tools: Record<string, Function> = {
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
     const lines = contents.split("\n");
-    console.log(
-      `WRITE:\n${lines.slice(0, 10).join("\n")}\n${lines.length > 10 ? "..." : ""}\n`,
-    );
+
+    console.log(`WRITE:\n${lines}\n...\n`);
 
     const reason = denyReason();
     if (reason !== null) {
@@ -169,21 +160,18 @@ export const tools: Record<string, Function> = {
     writeFileSync(file, contents, { encoding: "utf-8" });
   },
   bash: ({ command }: { command: string }) => {
+    console.log(`RUN: ${command}\n`);
+
     const reason = denyReason();
     if (reason !== null) {
       return `Bash operation denied. Reason: ${reason}`;
     }
 
-    console.log(`EXECUTE: ${command}\n`);
     try {
       const proc = spawnSync(command.split(" "));
       if (proc.exitCode === 0) {
-        console.log(proc.stdout.toString());
         return proc.stdout.toString();
       } else {
-        console.log(`Error: status ${proc.exitCode}`);
-        console.log(proc.stdout.toString());
-        console.log(proc.stderr.toString());
         return proc.stderr.toString();
       }
     } catch (e) {
