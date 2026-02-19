@@ -106,7 +106,7 @@ export const definitions: Tool[] = [
   },
 ];
 
-export const tools: Record<string, Function> = {
+export const tools: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     const contents = readFileSync(file, "utf-8");
     return contents;
@@ -146,6 +146,7 @@ export const tools: Record<string, Function> = {
     writeFileSync(file, content.replace(target, replacement), {
       encoding: "utf-8",
     });
+    return "Edit succeeded.";
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
     const lines = contents.split("\n");
@@ -158,6 +159,7 @@ export const tools: Record<string, Function> = {
     }
 
     writeFileSync(file, contents, { encoding: "utf-8" });
+    return "Write succeeded.";
   },
   bash: ({ command }: { command: string }) => {
     console.log(`RUN: ${command}\n`);
@@ -177,6 +179,7 @@ export const tools: Record<string, Function> = {
     } catch (e) {
       console.log(e);
       console.log(JSON.stringify(e));
+      return `Bash operation failed: ${e}`;
     }
   },
 };
