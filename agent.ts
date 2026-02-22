@@ -4,7 +4,8 @@ import chalk from "chalk";
 import { userInfo } from "os";
 import { definitions, tools } from "./tools.ts";
 
-const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
+// const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
+const MODEL = "devstral-small-2:latest";
 
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
@@ -38,18 +39,15 @@ For each function call, return a json object with function name and arguments wi
   },
 ];
 
+let contextLength: number | undefined;
+let contextUsed = 0;
+
 let mode: "thinking" | "response" | "tool" | undefined;
 while (true) {
   if (mode !== "tool") {
-    const tokenCount = messages
-      .map((m) => m.content)
-      .join(" ")
-      .split(" ").length;
-
-    let contextLength: number | undefined;
-    {
+    if (!contextLength) {
       const ps = await ollama.ps();
-      const model = ps.models.find((model) => model.model === MODEL);
+      const model = ps.models.find(({ model }) => model === MODEL);
       if (
         model &&
         "context_length" in model &&
@@ -60,9 +58,10 @@ while (true) {
     }
 
     const contextString = !!contextLength
-      ? (parseFloat((tokenCount / contextLength).toFixed(3)) * 100).toFixed(1) +
-        "%"
-      : `${tokenCount} tokens`;
+      ? (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(
+          1,
+        ) + "%"
+      : "";
 
     let line = null;
     while (!line) {
@@ -83,6 +82,7 @@ while (true) {
 
   let fullResponse = "";
   for await (const part of response) {
+    contextUsed = part.prompt_eval_count;
     if (part.done) {
       continue;
     }

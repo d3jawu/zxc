@@ -1,6 +1,9 @@
 {
   "name": "agent",
   "module": "agent.ts",
+  "scripts": {
+    "start": "bun run agent.ts"
+  },
   "type": "module",
   "private": true,
   "devDependencies": {
