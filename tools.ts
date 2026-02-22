@@ -1,6 +1,7 @@
-import { readFileSync, readdirSync, writeFileSync } from "fs";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
+import { showError } from "./util";
 
 export const definitions: Tool[] = [
   {
@@ -108,12 +109,22 @@ export const definitions: Tool[] = [
 
 export const tools: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
+    console.log(`READ: ${file}`);
+    if (!statSync(file).isFile()) {
+      showError(`${file} does not exist, or is not a file.`);
+      return `Error: "${file}" does not exist, or is not a file.`;
+    }
     const contents = readFileSync(file, "utf-8");
     return contents;
   },
   list: ({ path }: { path?: string }) => {
     if (!path) {
       path = process.cwd();
+    }
+
+    if (!statSync(path).isDirectory()) {
+      showError(`${path} does not exist, or is not a directory.`);
+      return `Error: "${path}" does not exist, or is not a directory.`;
     }
 
     return readdirSync(path).join(",");
@@ -127,20 +138,23 @@ export const tools: Record<string, (args: any) => string> = {
     target: string;
     replacement: string;
   }) => {
-    const content = readFileSync(file, "utf-8");
-
     console.log(
       `REPLACE:\n...\n${target}\n...\n\nWITH:\n...\n${replacement}\n...\n`,
     );
+    if (!statSync(file).isFile()) {
+      showError(`${file} does not exist, or is not a file.`);
+      return `Error: File "${file}" does not exist.`;
+    }
+    const content = readFileSync(file, "utf-8");
 
     if (!content.includes(target)) {
-      console.log("Error: Target string not found.");
-      return "String to replace was not found. Ensure target matches exactly.";
+      showError("Target string not found.");
+      return "Error: String to replace was not found. Ensure target matches exactly.";
     }
 
     const reason = denyReason();
     if (reason !== null) {
-      return `Edit operation denied. Reason: ${reason}`;
+      return `Error: Edit operation denied by user because: ${reason}`;
     }
 
     writeFileSync(file, content.replace(target, replacement), {
@@ -155,7 +169,7 @@ export const tools: Record<string, (args: any) => string> = {
 
     const reason = denyReason();
     if (reason !== null) {
-      return `Write operation denied. Reason: ${reason}`;
+      return `Error: Write operation denied by user because: ${reason}`;
     }
 
     writeFileSync(file, contents, { encoding: "utf-8" });
@@ -166,7 +180,7 @@ export const tools: Record<string, (args: any) => string> = {
 
     const reason = denyReason();
     if (reason !== null) {
-      return `Bash operation denied. Reason: ${reason}`;
+      return `Error: Bash operation denied by user because: ${reason}`;
     }
 
     try {
@@ -186,8 +200,6 @@ export const tools: Record<string, (args: any) => string> = {
 
 // Reusable function to get confirmation or denial reason
 function denyReason(): string | null {
-  const input = prompt(
-    "Press Enter to confirm, or provide a reason for denial: ",
-  );
+  const input = prompt("Confirm (↵) or deny (give reason):");
   return input?.trim() || null;
 }

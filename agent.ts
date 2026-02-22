@@ -3,6 +3,7 @@ import type { Message } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { definitions, tools } from "./tools.ts";
+import { showError } from "./util.ts";
 
 // const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
 const MODEL = "devstral-small-2:latest";
@@ -15,8 +16,8 @@ const messages: Message[] = [
   {
     role: "system",
     content: `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
-  Your context window is small, so you must be as concise as possible in both thinking and responding.
-  Available tools:
+Your context window is small, so you must be as concise as possible in both thinking and responding.
+Available tools:
   - read: Read file contents
   - list: List files in directory
   - edit: Replace text to changes to an existing file
@@ -26,16 +27,17 @@ For each function call, return a json object with function name and arguments wi
 <tool_call>
 {"name": <function-name>, "arguments": <args-json-object>}
 </tool_call>
+Tool calls that fail will respond with a message that begins with "Error:" followed by the reason.
 
-  Guidelines:
-  - Do not leave comments in code, instead strive to make the code itself self-explanatory
-  - Use read to examine files before editing
-  - Use edit for precise changes (target text must match exactly)
-  - Do not end output until the user request has been addressed
-  - Use write only for new files or complete rewrites
-  - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did
-  - Be very concise in your responses
-  - Show file paths clearly when working with files`,
+Guidelines:
+- Do not leave comments in code, instead strive to make the code itself self-explanatory
+- Use read to examine files before editing
+- Use edit for precise changes (target text must match exactly)
+- Do not end output until the user request has been addressed
+- Use write only for new files or complete rewrites
+- When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did
+- Be very concise in your responses
+- Show file paths clearly when working with files`,
   },
 ];
 
@@ -61,7 +63,7 @@ while (true) {
       ? (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(
           1,
         ) + "%"
-      : "";
+      : "--";
 
     let line = null;
     while (!line) {
@@ -101,13 +103,13 @@ while (true) {
       messages.push(part.message);
       for (const toolCall of part.message.tool_calls) {
         process.stdout.write(
-          `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}: ${JSON.stringify(toolCall.function.arguments)}\n`,
+          `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}\n`,
         );
         const toolResponse: string = await (
           tools[toolCall.function.name] ||
           (() => {
-            console.log(
-              `${chalk.red("error")}: Attempted to call invalid tool ${toolCall.function.name}`,
+            showError(
+              `Attempted to call invalid tool: ${toolCall.function.name}`,
             );
             return "";
           })
