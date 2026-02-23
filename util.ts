@@ -2,7 +2,7 @@ import chalk, { type ChalkInstance } from "chalk";
 import ansi from "ansi-escape-sequences";
 
 export const showError = (message: string) => {
-  console.log(`${chalk.red("error")}: ${message}`);
+  console.log(`${chalk.white.bgRed("ERROR")} ${message}`);
 };
 
 let spinnerId: NodeJS.Timeout | undefined;

@@ -110,7 +110,7 @@ export const definitions: Tool[] = [
 export const tools: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     console.log(`READ: ${file}`);
-    if (!statSync(file).isFile()) {
+    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       showError(`${file} does not exist, or is not a file.`);
       return `Error: "${file}" does not exist, or is not a file.`;
     }
@@ -121,8 +121,9 @@ export const tools: Record<string, (args: any) => string> = {
     if (!path) {
       path = process.cwd();
     }
+    console.log(`LIST: ${path}`);
 
-    if (!statSync(path).isDirectory()) {
+    if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
       showError(`${path} does not exist, or is not a directory.`);
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
@@ -139,9 +140,9 @@ export const tools: Record<string, (args: any) => string> = {
     replacement: string;
   }) => {
     console.log(
-      `REPLACE:\n...\n${target}\n...\n\nWITH:\n...\n${replacement}\n...\n`,
+      `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
     );
-    if (!statSync(file).isFile()) {
+    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       showError(`${file} does not exist, or is not a file.`);
       return `Error: File "${file}" does not exist.`;
     }
@@ -164,8 +165,7 @@ export const tools: Record<string, (args: any) => string> = {
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
     const lines = contents.split("\n");
-
-    console.log(`WRITE:\n${lines}\n...\n`);
+    console.log(`WRITE: ${file}\n${lines}\n...\n`);
 
     const reason = denyReason();
     if (reason !== null) {
