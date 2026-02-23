@@ -6,19 +6,18 @@ export const showError = (message: string) => {
 };
 
 let spinnerId: NodeJS.Timeout | undefined;
-export const showSpinner = () => {
-  let spinnerPosition = 0;
-  const spinnerStates = ["/", "-", "\\", "|"];
+export const showTimer = () => {
+  const startTime = Date.now();
   process.stdout.write(`\n${ansi.style.gray}Model running  `);
   spinnerId = setInterval(() => {
+    const elapsed = (Date.now() - startTime) / 1000;
     process.stdout.write(
-      `${ansi.cursor.back(1)}${spinnerStates[spinnerPosition]}`,
+      `${ansi.cursor.back(100)}Model running ${elapsed.toFixed(2)}s`,
     );
-    spinnerPosition = (spinnerPosition + 1) % spinnerStates.length;
-  }, 100);
+  }, 75);
 };
 
-export const hideSpinner = () => {
-  process.stdout.write(`${ansi.erase.inLine(1)}${ansi.style.reset}`);
+export const hideTimer = () => {
+  process.stdout.write(`${ansi.style.reset}\n`);
   clearInterval(spinnerId);
 };

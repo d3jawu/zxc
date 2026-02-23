@@ -3,7 +3,7 @@ import type { Message } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { definitions, tools } from "./tools.ts";
-import { showError, showSpinner, hideSpinner } from "./util.ts";
+import { showError, showTimer, hideTimer } from "./util.ts";
 
 // const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
 const MODEL = "devstral-small-2:latest";
@@ -71,7 +71,7 @@ while (true) {
     messages.push({ role: "user", content: line });
   }
 
-  showSpinner();
+  showTimer();
 
   const response = await ollama.chat({
     model: MODEL,
@@ -81,7 +81,8 @@ while (true) {
     think: false,
   });
 
-  hideSpinner();
+  hideTimer();
+
   let fullResponse = "";
   for await (const part of response) {
     contextUsed = part.prompt_eval_count;
