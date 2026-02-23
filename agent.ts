@@ -3,7 +3,7 @@ import type { Message } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { definitions, tools } from "./tools.ts";
-import { showError } from "./util.ts";
+import { showError, showSpinner, hideSpinner } from "./util.ts";
 
 // const MODEL = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:UD-Q4_K_XL";
 const MODEL = "devstral-small-2:latest";
@@ -23,10 +23,6 @@ Available tools:
   - edit: Replace text to changes to an existing file
   - write: Create or overwrite a file
   - bash: Execute commands
-For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
-<tool_call>
-{"name": <function-name>, "arguments": <args-json-object>}
-</tool_call>
 Tool calls that fail will respond with a message that begins with "Error:" followed by the reason.
 
 Guidelines:
@@ -44,9 +40,10 @@ Guidelines:
 let contextLength: number | undefined;
 let contextUsed = 0;
 
-let mode: "thinking" | "response" | "tool" | undefined;
+let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 while (true) {
   if (mode !== "tool") {
+    mode = "prompt";
     if (!contextLength) {
       const ps = await ollama.ps();
       const model = ps.models.find(({ model }) => model === MODEL);
@@ -74,6 +71,8 @@ while (true) {
     messages.push({ role: "user", content: line });
   }
 
+  showSpinner();
+
   const response = await ollama.chat({
     model: MODEL,
     stream: true,
@@ -82,6 +81,7 @@ while (true) {
     think: false,
   });
 
+  hideSpinner();
   let fullResponse = "";
   for await (const part of response) {
     contextUsed = part.prompt_eval_count;
