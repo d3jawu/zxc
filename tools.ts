@@ -148,6 +148,11 @@ export const tools: Record<string, (args: any) => string> = {
     }
     const content = readFileSync(file, "utf-8");
 
+    if (target === replacement) {
+      showError(`Replacement text is the same as target text.`);
+      return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
+    }
+
     if (!content.includes(target)) {
       showError("Target string not found.");
       return "Error: String to replace was not found. Ensure target matches exactly.";
@@ -164,8 +169,7 @@ export const tools: Record<string, (args: any) => string> = {
     return "Edit succeeded.";
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    const lines = contents.split("\n");
-    console.log(`WRITE: ${file}\n${lines}\n...\n`);
+    console.log(`WRITE: ${file}\n${contents}\n`);
 
     const reason = denyReason();
     if (reason !== null) {
