@@ -59,7 +59,10 @@ while (true) {
     const contextString = !!contextLength
       ? (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(
           1,
-        ) + "%"
+        ) +
+        "%, " +
+        (contextUsed / 1000).toFixed(1) +
+        "k"
       : "--";
 
     let line = null;
