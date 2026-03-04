@@ -3,6 +3,11 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 
+export type ToolSet = {
+  definitions: Tool[];
+  implementations: Record<string, (args: any) => string>;
+};
+
 export const definitions: Tool[] = [
   {
     type: "function",
@@ -107,7 +112,7 @@ export const definitions: Tool[] = [
   },
 ];
 
-export const tools: Record<string, (args: any) => string> = {
+export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     console.log(`READ: ${file}`);
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {

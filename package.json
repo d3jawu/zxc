@@ -1,9 +1,11 @@
 {
   "name": "agent",
   "scripts": {
-    "start": "bun run agent.ts"
+    "start": "bun run index.ts"
   },
-  "module": "agent.ts",
+  "exports": {
+    ".": "./agent.ts"
+  },
   "type": "module",
   "private": true,
   "devDependencies": {
