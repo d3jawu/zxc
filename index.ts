@@ -1,7 +1,7 @@
 import run from "./agent";
 import { definitions, implementations } from "./tools";
 
-const model = "devstral-small-2:latest";
+const model = "qwen3.5:35b";
 
 const systemPrompt = `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 Your context window is small, so you must be as concise as possible in both thinking and responding.

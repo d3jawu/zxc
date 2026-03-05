@@ -3,10 +3,6 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 
-export type ToolSet = {
-  definitions: Tool[];
-  implementations: Record<string, (args: any) => string>;
-};
 
 export const definitions: Tool[] = [
   {

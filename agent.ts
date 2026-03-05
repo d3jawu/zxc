@@ -1,13 +1,18 @@
 import { Ollama } from "ollama";
-import type { Message } from "ollama";
+import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
-import { type ToolSet } from "./tools.ts";
+
 import { showError, showTimer, hideTimer } from "./util.ts";
 
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
 });
+
+export type ToolSet = {
+  definitions: Tool[];
+  implementations: Record<string, (args: any) => string>;
+};
 
 type AgentOptions = {
   systemPrompt: string;
