@@ -65,7 +65,32 @@ export default async function run({
         line = prompt(
           `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}:`,
         );
+        if (line && line.startsWith("/")) {
+          const [command, ...args] = line.split(" ");
+          if (command === "/model") {
+            const models = (await ollama.list()).models.map(
+              (model) => model.name,
+            );
+            if (args.length === 0) {
+              console.log("Available models:\n");
+              console.log(models.join("\n"));
+            } else {
+              const newModel = args[0] as string;
+              if (!models.includes(newModel)) {
+                console.log(`Model not found: ${newModel}`);
+              } else {
+                console.log(`Model set to ${newModel}.`);
+                model = newModel;
+              }
+            }
+          } else {
+            console.log(`Invalid command: ${command}`);
+          }
+
+          line = null;
+        }
       }
+
       messages.push({ role: "user", content: line });
     }
 
