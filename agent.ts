@@ -117,7 +117,7 @@ export default async function run({
       if (part.message.thinking) {
         if (mode !== "thinking") {
           process.stdout.write(
-            `\n${chalk.yellow("agent(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
+            `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
           );
           mode = "thinking";
         }
@@ -148,7 +148,7 @@ export default async function run({
       } else if (part.message.content) {
         if (mode !== "response") {
           process.stdout.write(
-            `\n${chalk.yellow("agent(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
+            `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
           );
           mode = "response";
         }
