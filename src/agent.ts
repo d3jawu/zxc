@@ -3,7 +3,7 @@ import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 
-import { showError, showTimer, hideTimer } from "./util.ts";
+import { showError, showTimer, hideTimer } from "./util";
 
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,

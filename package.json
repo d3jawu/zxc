@@ -1,10 +1,11 @@
 {
   "name": "agent",
   "scripts": {
-    "start": "bun run index.ts"
+    "start": "bun run src/index.ts"
   },
+  "bin": "src/index.ts",
   "exports": {
-    ".": "./agent.ts"
+    ".": "./src/agent.ts"
   },
   "type": "module",
   "private": true,
