@@ -3,6 +3,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 import chalk from "chalk";
+import prettier from "@prettier/sync";
 
 export const definitions: Tool[] = [
   {
@@ -155,7 +156,37 @@ export const implementations: Record<string, (args: any) => string> = {
 
     target = target.trim();
 
-    if (!content.includes(target)) {
+    if (
+      !content.includes(target) &&
+      (file.endsWith(".ts") || file.endsWith(".js"))
+    ) {
+      console.log("Target string not found, attempting normalized replacement");
+
+      const contentNormalized = content.replace(/\s+/g, " ");
+      const targetNormalized = target.replace(/\s+/g, " ");
+
+      if (!contentNormalized.includes(targetNormalized)) {
+        showError("Normalized target string still not found.");
+        return "Error: Even after normalization, target string not found.";
+      }
+      const replacedContent = contentNormalized.replace(
+        targetNormalized,
+        replacement,
+      );
+
+      console.log("Normalized replacement is possible. Continue?");
+      const reason = denyReason();
+      if (reason !== null) {
+        return `Error: Edit operation denied by user because: ${reason}`;
+      }
+
+      const prettifiedContent = prettier.format(replacedContent, {
+        parser: file.endsWith(".ts") ? "typescript" : "babel",
+      });
+
+      writeFileSync(file, prettifiedContent, { encoding: "utf-8" });
+      return "Edit succeeded (with normalization).";
+    } else if (!content.includes(target)) {
       showError("Target string not found.");
       return "Error: String to replace was not found. Ensure target matches exactly, including whitespace.";
     }
@@ -190,7 +221,7 @@ export const implementations: Record<string, (args: any) => string> = {
     }
 
     try {
-      const proc = spawnSync(command.split(" "));
+      const proc = spawnSync({ cmd: command.split(" ") });
       let output = "";
       if (proc.exitCode === 0) {
         output = proc.stdout.toString();
