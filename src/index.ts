@@ -2,7 +2,7 @@
 import run from "./agent";
 import { definitions, implementations } from "./tools";
 
-const model = "qwen3.5:35b-a3b-coding-nvfp4";
+const model = "qwen3.6:35b-a3b-coding-nvfp4";
 
 const systemPrompt = `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 Your context window is small, so you must be as concise as possible in both thinking and responding.
@@ -17,7 +17,7 @@ Tool calls that fail will respond with a message that begins with "Error:" follo
 Guidelines:
 - Do not leave comments in code, instead strive to make the code itself self-explanatory
 - Use read to examine files before editing
-- Use edit for precise changes (target text must match exactly)
+- Use edit for precise changes (target text must match exactly including whitespace)
 - Do not end output until the user request has been addressed
 - Use write only for new files or complete rewrites
 - When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did

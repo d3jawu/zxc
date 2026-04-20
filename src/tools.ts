@@ -3,7 +3,6 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 
-
 export const definitions: Tool[] = [
   {
     type: "function",
@@ -45,7 +44,7 @@ export const definitions: Tool[] = [
     function: {
       name: "edit",
       description:
-        "Replace all occurrences of a string in a file with another string. Use this for precise text replacement in files.",
+        "Replace the first occurrence of a string in a file with another string. Use this for precise text replacement in files.",
       parameters: {
         type: "object",
         required: ["file", "target", "replacement"],
@@ -154,9 +153,11 @@ export const implementations: Record<string, (args: any) => string> = {
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
     }
 
+    target = target.trim();
+
     if (!content.includes(target)) {
       showError("Target string not found.");
-      return "Error: String to replace was not found. Ensure target matches exactly.";
+      return "Error: String to replace was not found. Ensure target matches exactly, including whitespace.";
     }
 
     const reason = denyReason();
