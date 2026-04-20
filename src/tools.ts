@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
+import chalk from "chalk";
 
 export const definitions: Tool[] = [
   {
@@ -55,11 +56,12 @@ export const definitions: Tool[] = [
           },
           target: {
             type: "string",
-            description: "The exact string to match and replace.",
+            description:
+              "The string to match and replace. Must match the source text exactly, including whitespace.",
           },
           replacement: {
             type: "string",
-            description: "The string to replace the 'replace' string with.",
+            description: "The string to replace the 'target' string with.",
           },
         },
       },
@@ -122,12 +124,10 @@ export const implementations: Record<string, (args: any) => string> = {
       path = process.cwd();
     }
     console.log(`LIST: ${path}`);
-
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
       showError(`${path} does not exist, or is not a directory.`);
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
-
     return readdirSync(path).join(",");
   },
   edit: ({
@@ -191,11 +191,14 @@ export const implementations: Record<string, (args: any) => string> = {
 
     try {
       const proc = spawnSync(command.split(" "));
+      let output = "";
       if (proc.exitCode === 0) {
-        return proc.stdout.toString();
+        output = proc.stdout.toString();
       } else {
-        return proc.stderr.toString();
+        output = proc.stderr.toString();
       }
+      console.log("\n" + chalk.gray(output));
+      return output;
     } catch (e) {
       console.log(e);
       console.log(JSON.stringify(e));
