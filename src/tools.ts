@@ -221,7 +221,9 @@ export const implementations: Record<string, (args: any) => string> = {
     }
 
     try {
-      const proc = spawnSync({ cmd: command.split(" ") });
+      const proc = spawnSync({
+        cmd: ["bash", "-c", command],
+      });
       let output = "";
       if (proc.exitCode === 0) {
         output = proc.stdout.toString();
