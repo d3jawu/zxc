@@ -2,39 +2,40 @@ import { Ollama } from "ollama";
 import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
-
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { join } from "path";
 import { showError, showTimer, hideTimer } from "./util";
+const HISTORY_FILE = join(process.cwd(), ".history.json");
+let messages: Message[] = [];
 
+function pushMessage(message: Message): void {
+  messages.push(message);
+  // writeFileSync(HISTORY_FILE, JSON.stringify(messages, null, 2), "utf-8");
+}
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
 });
-
 export type ToolSet = {
   definitions: Tool[];
   implementations: Record<string, (args: any) => string>;
 };
-
-type AgentOptions = {
-  systemPrompt: string;
-  model: string;
-  toolset: ToolSet;
-};
-
+type AgentOptions = { systemPrompt: string; model: string; toolset: ToolSet };
 export default async function run({
   model,
   systemPrompt,
   toolset,
 }: AgentOptions) {
-  const messages: Message[] = [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-  ];
-
+  // if (existsSync(HISTORY_FILE)) {
+  //   const history = JSON.parse(
+  //     readFileSync(HISTORY_FILE, "utf-8"),
+  //   ) as Message[];
+  //   messages.push(...history);
+  //   console.log("History loaded.");
+  // } else {
+  pushMessage({ role: "system", content: systemPrompt });
+  // }
   let contextLength: number | undefined;
   let contextUsed = 0;
-
   let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
   while (true) {
     if (mode !== "tool") {
@@ -50,7 +51,6 @@ export default async function run({
           contextLength = foundModel.context_length;
         }
       }
-
       const contextString = !!contextLength
         ? (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(
             1,
@@ -59,7 +59,6 @@ export default async function run({
           (contextUsed / 1000).toFixed(1) +
           "k"
         : "--";
-
       let line = null;
       while (!line) {
         line = prompt(
@@ -86,16 +85,12 @@ export default async function run({
           } else {
             console.log(`Invalid command: ${command}`);
           }
-
           line = null;
         }
       }
-
-      messages.push({ role: "user", content: line });
+      pushMessage({ role: "user", content: line });
     }
-
     showTimer();
-
     const response = await ollama.chat({
       model,
       stream: true,
@@ -103,16 +98,13 @@ export default async function run({
       tools: toolset.definitions,
       think: false,
     });
-
     hideTimer();
-
     let fullResponse = "";
     for await (const part of response) {
       contextUsed = part.prompt_eval_count;
       if (part.done) {
         continue;
       }
-
       fullResponse += part.message.content;
       if (part.message.thinking) {
         if (mode !== "thinking") {
@@ -121,10 +113,9 @@ export default async function run({
           );
           mode = "thinking";
         }
-
         process.stdout.write(chalk.gray(part.message.thinking));
       } else if (part.message.tool_calls) {
-        messages.push(part.message);
+        pushMessage(part.message);
         for (const toolCall of part.message.tool_calls) {
           process.stdout.write(
             `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}\n`,
@@ -138,7 +129,7 @@ export default async function run({
               return "";
             })
           )(toolCall.function.arguments);
-          messages.push({
+          pushMessage({
             role: "tool",
             tool_name: toolCall.function.name,
             content: toolResponse,
@@ -160,7 +151,7 @@ export default async function run({
     }
     process.stdout.write("\n");
     if (fullResponse) {
-      messages.push({ role: "assistant", content: fullResponse });
+      pushMessage({ role: "assistant", content: fullResponse });
       process.stdout.write("\n");
     }
   }
