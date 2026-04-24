@@ -155,6 +155,7 @@ export const implementations: Record<string, (args: any) => string> = {
     }
 
     target = target.trim();
+    replacement = replacement.trim();
 
     if (
       !content.includes(target) &&

@@ -2,7 +2,8 @@
 import run from "./agent";
 import { definitions, implementations } from "./tools";
 
-const model = "qwen3.6:35b-a3b-coding-nvfp4";
+// const model = "qwen3.6:35b-a3b-coding-nvfp4";
+const model = "qwen3.6:27b-coding-nvfp4";
 
 const systemPrompt = `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 Your context window is small, so you must be as concise as possible in both thinking and responding.
