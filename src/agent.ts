@@ -3,7 +3,7 @@ import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { showError, showTimer, hideTimer } from "./util";
-
+import readline from "readline/promises";
 const ollama = new Ollama({
   host: process.env["OLLAMA_API_BASE"] || undefined,
 });
@@ -45,9 +45,18 @@ export default async function run({
         : "--";
       let line = null;
       while (!line) {
-        line = prompt(
-          `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}:`,
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        });
+        rl.on("SIGINT", () => {
+          console.log("\nBye!");
+          process.exit(0);
+        });
+        line = await rl.question(
+          `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
         );
+        rl.close();
         if (line && line.startsWith("/")) {
           const [command, ...args] = line.split(" ");
           if (command === "/model") {
