@@ -1,12 +1,10 @@
-import { Ollama } from "ollama";
+import ollama from "./ollama";
 import type { Message, Tool } from "ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import { showError, showTimer, hideTimer } from "./util";
 import readline from "readline/promises";
-const ollama = new Ollama({
-  host: process.env["OLLAMA_API_BASE"] || undefined,
-});
+
 export type ToolSet = {
   definitions: Tool[];
   implementations: Record<string, (args: any) => string>;
@@ -89,7 +87,7 @@ export default async function run({
       stream: true,
       messages,
       tools: toolset.definitions,
-      think: false,
+      think: true,
     });
     hideTimer();
     let fullResponse = "";
