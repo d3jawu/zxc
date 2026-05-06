@@ -1,26 +1,15 @@
 import ollama from "./ollama";
 import type { Message, Tool } from "ollama";
+import type { Ui } from "./ui";
 export type ToolSet = {
   definitions: Tool[];
   implementations: Record<string, (args: any) => string>;
-};
-export type AgentCallbacks = {
-  onPrompt: (contextString: string) => Promise<string | null>;
-  onTtftStart: () => void;
-  onTtftEnd: () => void;
-  onThinkingStart: () => void;
-  onThinkingChunk: (text: string) => void;
-  onToolStart: (toolName: string) => void;
-  onToolError: (message: string) => void;
-  onResponseStart: () => void;
-  onResponseChunk: (text: string) => void;
-  onDone: () => void;
 };
 type AgentOptions = {
   systemPrompt: string;
   model: string;
   toolset: ToolSet;
-  ui: AgentCallbacks;
+  ui: Ui;
 };
 export default async function run({
   model,
