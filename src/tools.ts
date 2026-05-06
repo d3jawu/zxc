@@ -3,7 +3,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 import chalk from "chalk";
-
+import prettier from "@prettier/sync";
 
 export const definitions: Tool[] = [
   {
@@ -44,6 +44,33 @@ export const definitions: Tool[] = [
   {
     type: "function",
     function: {
+      name: "edit",
+      description:
+        "Replace the first occurrence of a string in a file with another string. Use this for precise text replacement in files.",
+      parameters: {
+        type: "object",
+        required: ["file", "target", "replacement"],
+        properties: {
+          file: {
+            type: "string",
+            description: "Path to the file to edit.",
+          },
+          target: {
+            type: "string",
+            description:
+              "The string to match and replace. Must match the source text exactly, including whitespace.",
+          },
+          replacement: {
+            type: "string",
+            description: "The string to replace the 'target' string with.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "write",
       description:
         "Write content to a specified file. Use this for creating new files or overwriting existing ones.",
@@ -58,36 +85,6 @@ export const definitions: Tool[] = [
           contents: {
             type: "string",
             description: "The content to be written to the file",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "replace",
-      description:
-        "Replace lines in a file with new text. Takes beginning and end line numbers (1-based, inclusive) and new text to replace those lines with.",
-      parameters: {
-        type: "object",
-        required: ["file", "startLine", "endLine", "newText"],
-        properties: {
-          file: {
-            type: "string",
-            description: "Path to the file to modify.",
-          },
-          startLine: {
-            type: "number",
-            description: "Beginning line number (1-based, inclusive).",
-          },
-          endLine: {
-            type: "number",
-            description: "End line number (1-based, inclusive).",
-          },
-          newText: {
-            type: "string",
-            description: "New text to replace the specified lines with.",
           },
         },
       },
@@ -134,6 +131,77 @@ export const implementations: Record<string, (args: any) => string> = {
     }
     return readdirSync(path).join(",");
   },
+  edit: ({
+    file,
+    target,
+    replacement,
+  }: {
+    file: string;
+    target: string;
+    replacement: string;
+  }) => {
+    console.log(
+      `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+    );
+    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
+      showError(`${file} does not exist, or is not a file.`);
+      return `Error: File "${file}" does not exist.`;
+    }
+    const content = readFileSync(file, "utf-8");
+
+    if (target === replacement) {
+      showError(`Replacement text is the same as target text.`);
+      return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
+    }
+
+    target = target.trim();
+    replacement = replacement.trim();
+
+    if (
+      !content.includes(target) &&
+      (file.endsWith(".ts") || file.endsWith(".js"))
+    ) {
+      console.log("Target string not found, attempting normalized replacement");
+
+      const contentNormalized = content.replace(/\s+/g, " ");
+      const targetNormalized = target.replace(/\s+/g, " ");
+
+      if (!contentNormalized.includes(targetNormalized)) {
+        showError("Normalized target string still not found.");
+        return "Error: Even after normalization, target string not found.";
+      }
+      const replacedContent = contentNormalized.replace(
+        targetNormalized,
+        replacement,
+      );
+
+      console.log("Normalized replacement is possible. Continue?");
+      const reason = denyReason();
+      if (reason !== null) {
+        return `Error: Edit operation denied by user because: ${reason}`;
+      }
+
+      const prettifiedContent = prettier.format(replacedContent, {
+        parser: file.endsWith(".ts") ? "typescript" : "babel",
+      });
+
+      writeFileSync(file, prettifiedContent, { encoding: "utf-8" });
+      return "Edit succeeded (with normalization).";
+    } else if (!content.includes(target)) {
+      showError("Target string not found.");
+      return "Error: String to replace was not found. Ensure target matches exactly, including whitespace.";
+    }
+
+    const reason = denyReason();
+    if (reason !== null) {
+      return `Error: Edit operation denied by user because: ${reason}`;
+    }
+
+    writeFileSync(file, content.replace(target, replacement), {
+      encoding: "utf-8",
+    });
+    return "Edit succeeded.";
+  },
   write: ({ file, contents }: { file: string; contents: string }) => {
     console.log(`WRITE: ${file}\n${contents}\n`);
 
@@ -144,57 +212,6 @@ export const implementations: Record<string, (args: any) => string> = {
 
     writeFileSync(file, contents, { encoding: "utf-8" });
     return "Write succeeded.";
-  },
-  replace: ({
-    file,
-    startLine,
-    endLine,
-    newText,
-  }: {
-    file: string;
-    startLine: number;
-    endLine: number;
-    newText: string;
-  }) => {
-    console.log(`REPLACE: ${file} lines ${startLine}-${endLine}`);
-
-    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      showError(`${file} does not exist, or is not a file.`);
-      return `Error: "${file}" does not exist, or is not a file.`;
-    }
-
-    const contents = readFileSync(file, "utf-8");
-    const lines = contents.split("\n");
-
-    if (startLine < 1 || endLine < startLine || endLine > lines.length) {
-      return `Error: Invalid line range. startLine: ${startLine}, endLine: ${endLine}, file has ${lines.length} lines.`;
-    }
-
-    const linesToReplace = lines.slice(startLine - 1, endLine);
-
-    console.log("\n--- FROM: ---");
-    linesToReplace.forEach((line, index) => {
-      console.log(`${chalk.red(startLine + index)}: ${line}`);
-    });
-    console.log(chalk.green("\n--- TO: ---"));
-    newText.split("\n").forEach((line, index) => {
-      console.log(`${chalk.green(startLine + index)}: ${line}`);
-    });
-
-    const before = lines.slice(0, startLine - 1);
-    const after = lines.slice(endLine);
-    const newLines = newText.split("\n");
-
-    const updatedLines = [...before, ...newLines, ...after];
-    const updatedContent = updatedLines.join("\n");
-
-    const reason = denyReason();
-    if (reason !== null) {
-      return `Error: Replace operation denied by user because: ${reason}`;
-    }
-
-    writeFileSync(file, updatedContent, { encoding: "utf-8" });
-    return "Replace succeeded.";
   },
   bash: ({ command }: { command: string }) => {
     console.log(`RUN: ${command}\n`);
