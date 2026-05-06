@@ -3,7 +3,6 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 import chalk from "chalk";
-import prettier from "@prettier/sync";
 
 export const definitions: Tool[] = [
   {
@@ -154,43 +153,30 @@ export const implementations: Record<string, (args: any) => string> = {
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
     }
 
+    if (!content.includes(target)) {
+      console.log("Target string not found, attempting to correct whitespace");
+
+      // Attempt whitespace correction
+      const correctedTarget = target.replaceAll(/^(  )* (?=\S)/gm, (match) =>
+        match.slice(0, -1),
+      );
+      if (correctedTarget !== target) {
+        console.log("Corrected whitespace.");
+        target = correctedTarget;
+        console.log(
+          `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+        );
+      } else {
+        console.log("Could not correct whitespace.");
+      }
+    }
+
+    if (!content.includes(target)) {
+      return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
+    }
+
     target = target.trim();
     replacement = replacement.trim();
-
-    if (
-      !content.includes(target) &&
-      (file.endsWith(".ts") || file.endsWith(".js"))
-    ) {
-      console.log("Target string not found, attempting normalized replacement");
-
-      const contentNormalized = content.replace(/\s+/g, " ");
-      const targetNormalized = target.replace(/\s+/g, " ");
-
-      if (!contentNormalized.includes(targetNormalized)) {
-        showError("Normalized target string still not found.");
-        return "Error: Even after normalization, target string not found.";
-      }
-      const replacedContent = contentNormalized.replace(
-        targetNormalized,
-        replacement,
-      );
-
-      console.log("Normalized replacement is possible. Continue?");
-      const reason = denyReason();
-      if (reason !== null) {
-        return `Error: Edit operation denied by user because: ${reason}`;
-      }
-
-      const prettifiedContent = prettier.format(replacedContent, {
-        parser: file.endsWith(".ts") ? "typescript" : "babel",
-      });
-
-      writeFileSync(file, prettifiedContent, { encoding: "utf-8" });
-      return "Edit succeeded (with normalization).";
-    } else if (!content.includes(target)) {
-      showError("Target string not found.");
-      return "Error: String to replace was not found. Ensure target matches exactly, including whitespace.";
-    }
 
     const reason = denyReason();
     if (reason !== null) {
