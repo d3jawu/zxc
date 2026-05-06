@@ -1,11 +1,22 @@
-import type { AgentCallbacks } from "./agent";
 import ollama from "./ollama";
 import chalk from "chalk";
 import { userInfo } from "os";
 import readline from "readline/promises";
 import { showError, showTimer, hideTimer } from "./util";
 
-export function ui(modelRef: { current: string }): AgentCallbacks {
+export type Ui = {
+  onPrompt: (contextString: string) => Promise<string | null>;
+  onTtftStart: () => void;
+  onTtftEnd: () => void;
+  onThinkingStart: () => void;
+  onThinkingChunk: (text: string) => void;
+  onToolStart: (toolName: string) => void;
+  onToolError: (message: string) => void;
+  onResponseStart: () => void;
+  onResponseChunk: (text: string) => void;
+  onDone: () => void;
+};
+export function ui(modelRef: { current: string }): Ui {
   return {
     onPrompt: async (contextString: string): Promise<string | null> => {
       let line: string | null = null;
