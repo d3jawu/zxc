@@ -1,19 +1,32 @@
 import ollama from "./ollama";
 import type { Message, Tool } from "ollama";
-import chalk from "chalk";
-import { userInfo } from "os";
-import { showError, showTimer, hideTimer } from "./util";
-import readline from "readline/promises";
-
 export type ToolSet = {
   definitions: Tool[];
   implementations: Record<string, (args: any) => string>;
 };
-type AgentOptions = { systemPrompt: string; model: string; toolset: ToolSet };
+export type AgentCallbacks = {
+  onPrompt: (contextString: string) => Promise<string | null>;
+  onTtftStart: () => void;
+  onTtftEnd: () => void;
+  onThinkingStart: () => void;
+  onThinkingChunk: (text: string) => void;
+  onToolStart: (toolName: string) => void;
+  onToolError: (message: string) => void;
+  onResponseStart: () => void;
+  onResponseChunk: (text: string) => void;
+  onDone: () => void;
+};
+type AgentOptions = {
+  systemPrompt: string;
+  model: string;
+  toolset: ToolSet;
+  ui: AgentCallbacks;
+};
 export default async function run({
   model,
   systemPrompt,
   toolset,
+  ui,
 }: AgentOptions) {
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
   let contextLength: number | undefined;
@@ -41,47 +54,13 @@ export default async function run({
           (contextUsed / 1000).toFixed(1) +
           "k"
         : "--";
-      let line = null;
+      let line: string | null = null;
       while (!line) {
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        });
-        rl.on("SIGINT", () => {
-          console.log("\nBye!");
-          process.exit(0);
-        });
-        line = await rl.question(
-          `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
-        );
-        rl.close();
-        if (line && line.startsWith("/")) {
-          const [command, ...args] = line.split(" ");
-          if (command === "/model") {
-            const models = (await ollama.list()).models.map(
-              (model) => model.name,
-            );
-            if (args.length === 0) {
-              console.log("Available models:\n");
-              console.log(models.join("\n"));
-            } else {
-              const newModel = args[0] as string;
-              if (!models.includes(newModel)) {
-                console.log(`Model not found: ${newModel}`);
-              } else {
-                console.log(`Model set to ${newModel}.`);
-                model = newModel;
-              }
-            }
-          } else {
-            console.log(`Invalid command: ${command}`);
-          }
-          line = null;
-        }
+        line = await ui.onPrompt(contextString);
       }
       messages.push({ role: "user", content: line });
     }
-    showTimer();
+    ui.onTtftStart();
     const response = await ollama.chat({
       model,
       stream: true,
@@ -89,7 +68,7 @@ export default async function run({
       tools: toolset.definitions,
       think: true,
     });
-    hideTimer();
+    ui.onTtftEnd();
     let fullResponse = "";
     for await (const part of response) {
       contextUsed = part.prompt_eval_count;
@@ -99,27 +78,25 @@ export default async function run({
       fullResponse += part.message.content;
       if (part.message.thinking) {
         if (mode !== "thinking") {
-          process.stdout.write(
-            `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
-          );
+          ui.onThinkingStart();
           mode = "thinking";
         }
-        process.stdout.write(chalk.gray(part.message.thinking));
+        ui.onThinkingChunk(part.message.thinking);
       } else if (part.message.tool_calls) {
         messages.push(part.message);
         for (const toolCall of part.message.tool_calls) {
-          process.stdout.write(
-            `\n${chalk.green("tool(")}${chalk.gray(toolCall.function.name)}${chalk.green(")")}\n`,
-          );
-          const toolResponse: string = await (
+          ui.onToolStart(toolCall.function.name);
+          const toolFn =
             toolset.implementations[toolCall.function.name] ||
-            (() => {
-              showError(
+            ((() => {
+              ui.onToolError(
                 `Attempted to call invalid tool: ${toolCall.function.name}`,
               );
               return "";
-            })
-          )(toolCall.function.arguments);
+            }) as (args: any) => string);
+          const toolResponse: string = await toolFn(
+            toolCall.function.arguments,
+          );
           messages.push({
             role: "tool",
             tool_name: toolCall.function.name,
@@ -129,21 +106,20 @@ export default async function run({
         mode = "tool";
       } else if (part.message.content) {
         if (mode !== "response") {
-          process.stdout.write(
-            `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
-          );
+          ui.onResponseStart();
           mode = "response";
         }
-        process.stdout.write(part.message.content);
+        ui.onResponseChunk(part.message.content);
       } else {
+        ui.onDone();
         console.log("Warning: unrecognized message");
         console.log(part);
       }
     }
-    process.stdout.write("\n");
+    ui.onDone();
     if (fullResponse) {
       messages.push({ role: "assistant", content: fullResponse });
-      process.stdout.write("\n");
+      ui.onDone();
     }
   }
 }
