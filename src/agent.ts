@@ -18,34 +18,13 @@ export default async function run({
   ui,
 }: AgentOptions) {
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
-  let contextLength: number | undefined;
-  let contextUsed = 0;
   let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
   while (true) {
     if (mode !== "tool") {
       mode = "prompt";
-      if (!contextLength) {
-        const ps = await ollama.ps();
-        const foundModel = ps.models.find(({ model: m }) => m === model);
-        if (
-          foundModel &&
-          "context_length" in foundModel &&
-          typeof foundModel.context_length === "number"
-        ) {
-          contextLength = foundModel.context_length;
-        }
-      }
-      const contextString = !!contextLength
-        ? (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(
-            1,
-          ) +
-          "%, " +
-          (contextUsed / 1000).toFixed(1) +
-          "k"
-        : "--";
       let line: string | null = null;
       while (!line) {
-        line = await ui.onPrompt(contextString);
+        line = await ui.onPrompt(model);
       }
       messages.push({ role: "user", content: line });
     }
@@ -60,7 +39,7 @@ export default async function run({
     ui.onTtftEnd();
     let fullResponse = "";
     for await (const part of response) {
-      contextUsed = part.prompt_eval_count;
+      ui.onContextUsed(part.prompt_eval_count);
       if (part.done) {
         continue;
       }
@@ -77,12 +56,12 @@ export default async function run({
           ui.onToolStart(toolCall.function.name);
           const toolFn =
             toolset.implementations[toolCall.function.name] ||
-            ((() => {
+            (() => {
               ui.onToolError(
                 `Attempted to call invalid tool: ${toolCall.function.name}`,
               );
               return "";
-            }) as (args: any) => string);
+            });
           const toolResponse: string = await toolFn(
             toolCall.function.arguments,
           );

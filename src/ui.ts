@@ -4,8 +4,22 @@ import { userInfo } from "os";
 import readline from "readline/promises";
 import { showError, showTimer, hideTimer } from "./util";
 
+function computeContextString(
+  contextUsed: number,
+  contextLength: number | undefined,
+): string {
+  if (!contextLength) return "--";
+  return (
+    (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(1) +
+    "%, " +
+    (contextUsed / 1000).toFixed(1) +
+    "k"
+  );
+}
+
 export type Ui = {
-  onPrompt: (contextString: string) => Promise<string | null>;
+  onPrompt: (model: string) => Promise<string | null>;
+  onContextUsed: (contextUsed: number) => void;
   onTtftStart: () => void;
   onTtftEnd: () => void;
   onThinkingStart: () => void;
@@ -17,8 +31,20 @@ export type Ui = {
   onDone: () => void;
 };
 export function ui(modelRef: { current: string }): Ui {
+  let contextUsed = 0;
   return {
-    onPrompt: async (contextString: string): Promise<string | null> => {
+    onPrompt: async (model: string): Promise<string | null> => {
+      let contextLength: number | undefined;
+      const ps = await ollama.ps();
+      const foundModel = ps.models.find(({ model: m }) => m === model);
+      if (
+        foundModel &&
+        "context_length" in foundModel &&
+        typeof foundModel.context_length === "number"
+      ) {
+        contextLength = foundModel.context_length;
+      }
+      const contextString = computeContextString(contextUsed, contextLength);
       let line: string | null = null;
       while (line === null) {
         const rl = readline.createInterface({
@@ -60,6 +86,9 @@ export function ui(modelRef: { current: string }): Ui {
         }
       }
       return line;
+      },
+    onContextUsed: (ctxUsed: number) => {
+      contextUsed = ctxUsed;
     },
     onTtftStart: () => {
       showTimer();
