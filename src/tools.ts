@@ -154,25 +154,20 @@ export const implementations: Record<string, (args: any) => string> = {
     }
 
     if (!content.includes(target)) {
-      console.log("Target string not found, attempting to correct whitespace");
-
       // Attempt whitespace correction
       const correctedTarget = target.replaceAll(/^(  )* (?=\S)/gm, (match) =>
         match.slice(0, -1),
       );
-      if (correctedTarget !== target) {
-        console.log("Corrected whitespace.");
+      if (content.includes(correctedTarget)) {
+        console.log("Whitespace was corrected in target text.");
         target = correctedTarget;
         console.log(
           `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
         );
       } else {
-        console.log("Could not correct whitespace.");
+        showError(`Target text not found in ${file}.`);
+        return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
       }
-    }
-
-    if (!content.includes(target)) {
-      return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
     }
 
     target = target.trim();
