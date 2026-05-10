@@ -18,10 +18,8 @@ export default async function run({
   ui,
 }: AgentOptions) {
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
-  let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
   while (true) {
-    if (mode !== "tool") {
-      mode = "prompt";
+    if (ui.shouldPrompt) {
       let line: string | null = null;
       while (!line) {
         line = await ui.onPrompt(model);
@@ -45,10 +43,6 @@ export default async function run({
       }
       fullResponse += part.message.content;
       if (part.message.thinking) {
-        if (mode !== "thinking") {
-          ui.onThinkingStart();
-          mode = "thinking";
-        }
         ui.onThinkingChunk(part.message.thinking);
       } else if (part.message.tool_calls) {
         messages.push(part.message);
@@ -71,12 +65,7 @@ export default async function run({
             content: toolResponse,
           });
         }
-        mode = "tool";
       } else if (part.message.content) {
-        if (mode !== "response") {
-          ui.onResponseStart();
-          mode = "response";
-        }
         ui.onResponseChunk(part.message.content);
       } else {
         ui.onDone();
