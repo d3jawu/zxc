@@ -18,21 +18,24 @@ function computeContextString(
 }
 
 export type Ui = {
+  shouldPrompt: boolean;
   onPrompt: (model: string) => Promise<string | null>;
   onContextUsed: (contextUsed: number) => void;
   onTtftStart: () => void;
   onTtftEnd: () => void;
-  onThinkingStart: () => void;
   onThinkingChunk: (text: string) => void;
   onToolStart: (toolName: string) => void;
   onToolError: (message: string) => void;
-  onResponseStart: () => void;
   onResponseChunk: (text: string) => void;
   onDone: () => void;
 };
 export function ui(modelRef: { current: string }): Ui {
   let contextUsed = 0;
+  let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
   return {
+    get shouldPrompt() {
+      return mode !== "tool";
+    },
     onPrompt: async (model: string): Promise<string | null> => {
       let contextLength: number | undefined;
       const ps = await ollama.ps();
@@ -86,7 +89,7 @@ export function ui(modelRef: { current: string }): Ui {
         }
       }
       return line;
-      },
+    },
     onContextUsed: (ctxUsed: number) => {
       contextUsed = ctxUsed;
     },
@@ -96,15 +99,17 @@ export function ui(modelRef: { current: string }): Ui {
     onTtftEnd: () => {
       hideTimer();
     },
-    onThinkingStart: () => {
-      process.stdout.write(
-        `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
-      );
-    },
     onThinkingChunk: (text: string) => {
+      if (mode !== "thinking") {
+        process.stdout.write(
+          `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
+        );
+        mode = "thinking";
+      }
       process.stdout.write(chalk.gray(text));
     },
     onToolStart: (toolName: string) => {
+      mode = "tool";
       process.stdout.write(
         `\n${chalk.green("tool(")}${chalk.gray(toolName)}${chalk.green(")")}\n`,
       );
@@ -112,16 +117,17 @@ export function ui(modelRef: { current: string }): Ui {
     onToolError: (message: string) => {
       showError(message);
     },
-    onResponseStart: () => {
-      process.stdout.write(
-        `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
-      );
-    },
     onResponseChunk: (text: string) => {
+      if (mode !== "response") {
+        process.stdout.write(
+          `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
+        );
+        mode = "response";
+      }
       process.stdout.write(text);
     },
     onDone: () => {
       process.stdout.write("\n");
-    },
+     },
   };
 }
