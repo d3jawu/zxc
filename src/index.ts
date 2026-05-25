@@ -25,61 +25,57 @@ Guidelines:
 - Be very concise in your responses
 - Show file paths clearly when working with files`;
 
-async function main() {
-  let contextUsed = 0;
-  let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
+let contextUsed = 0;
+let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 
-  const agent = run({
-    systemPrompt,
-    model: modelRef.current,
-    toolset: {
-      definitions,
-      implementations,
-    },
-    promptProvider: async (model) => {
-      return await ui.promptUser(model, contextUsed, modelRef);
-    },
-  });
+const agent = run({
+  systemPrompt,
+  model: modelRef.current,
+  toolset: {
+    definitions,
+    implementations,
+  },
+  promptProvider: async (model) => {
+    return await ui.promptUser(model, contextUsed, modelRef);
+  },
+});
 
-  for await (const event of agent) {
-    switch (event.type) {
-      case "ttft_start":
-        ui.startTtft();
-        break;
-      case "ttft_end":
-        ui.endTtft();
-        break;
-      case "context_used":
-        contextUsed = event.count;
-        break;
-      case "thinking_chunk":
-        if (mode !== "thinking") {
-          ui.printThinkingHeader();
-          mode = "thinking";
-        }
-        ui.renderThinkingChunk(event.text);
-        break;
-      case "response_chunk":
-        if (mode !== "response") {
-          ui.printResponseHeader();
-          mode = "response";
-        }
-        ui.renderResponseChunk(event.text);
+for await (const event of agent) {
+  switch (event.type) {
+    case "ttft_start":
+      ui.startTtft();
+      break;
+    case "ttft_end":
+      ui.endTtft();
+      break;
+    case "context_used":
+      contextUsed = event.count;
+      break;
+    case "thinking_chunk":
+      if (mode !== "thinking") {
+        ui.printThinkingHeader();
+        mode = "thinking";
+      }
+      ui.renderThinkingChunk(event.text);
+      break;
+    case "response_chunk":
+      if (mode !== "response") {
+        ui.printResponseHeader();
         mode = "response";
-        break;
-      case "tool_start":
-        ui.renderToolStart(event.name);
-        mode = "tool";
-        break;
-      case "tool_error":
-        ui.renderToolError(event.message);
-        break;
-      case "done":
-        ui.finishResponse();
-        mode = "prompt";
-        break;
-    }
+      }
+      ui.renderResponseChunk(event.text);
+      mode = "response";
+      break;
+    case "tool_start":
+      ui.renderToolStart(event.name);
+      mode = "tool";
+      break;
+    case "tool_error":
+      ui.renderToolError(event.message);
+      break;
+    case "done":
+      ui.finishResponse();
+      mode = "prompt";
+      break;
   }
 }
-
-await main();
