@@ -1,32 +1,47 @@
 import ollama from "./ollama";
 import type { Message, Tool } from "ollama";
-import type { Ui } from "./ui";
+
 export type ToolSet = {
   definitions: Tool[];
-  implementations: Record<string, (args: any) => string>;
+  implementations: Record<string, (args: any) => Promise<string> | string>;
 };
+
+export type AgentEvent =
+  | { type: "ttft_start" }
+  | { type: "ttft_end" }
+  | { type: "context_used"; count: number }
+  | { type: "thinking_chunk"; text: string }
+  | { type: "tool_start"; name: string }
+  | { type: "tool_error"; message: string }
+  | { type: "response_chunk"; text: string }
+  | { type: "done" };
+
 type AgentOptions = {
   systemPrompt: string;
   model: string;
   toolset: ToolSet;
-  ui: Ui;
+  promptProvider: (model: string) => Promise<string | null>;
 };
-export default async function run({
+
+export default async function* run({
   model,
   systemPrompt,
   toolset,
-  ui,
-}: AgentOptions) {
+  promptProvider,
+}: AgentOptions): AsyncGenerator<AgentEvent> {
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
+  let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
+
   while (true) {
-    if (ui.shouldPrompt) {
+    if (mode !== "tool") {
       let line: string | null = null;
       while (!line) {
-        line = await ui.onPrompt(model);
+        line = await promptProvider(model);
       }
       messages.push({ role: "user", content: line });
     }
-    ui.onTtftStart();
+
+    yield { type: "ttft_start" };
     const response = await ollama.chat({
       model,
       stream: true,
@@ -34,31 +49,36 @@ export default async function run({
       tools: toolset.definitions,
       think: true,
     });
-    ui.onTtftEnd();
+    yield { type: "ttft_end" };
+
     let fullResponse = "";
     for await (const part of response) {
-      ui.onContextUsed(part.prompt_eval_count);
-      if (part.done) {
-        continue;
-      }
+      yield { type: "context_used", count: part.prompt_eval_count };
+      if (part.done) continue;
+
       fullResponse += part.message.content;
       if (part.message.thinking) {
-        ui.onThinkingChunk(part.message.thinking);
+        mode = "thinking";
+        yield { type: "thinking_chunk", text: part.message.thinking };
       } else if (part.message.tool_calls) {
+        mode = "tool";
         messages.push(part.message);
         for (const toolCall of part.message.tool_calls) {
-          ui.onToolStart(toolCall.function.name);
-          const toolFn =
-            toolset.implementations[toolCall.function.name] ||
-            (() => {
-              ui.onToolError(
-                `Attempted to call invalid tool: ${toolCall.function.name}`,
-              );
-              return "";
+          yield { type: "tool_start", name: toolCall.function.name };
+          const toolFn = toolset.implementations[toolCall.function.name];
+          if (!toolFn) {
+            yield {
+              type: "tool_error",
+              message: `Attempted to call invalid tool: ${toolCall.function.name}`,
+            };
+            messages.push({
+              role: "tool",
+              tool_name: toolCall.function.name,
+              content: "",
             });
-          const toolResponse: string = await toolFn(
-            toolCall.function.arguments,
-          );
+            continue;
+          }
+          const toolResponse = await toolFn(toolCall.function.arguments);
           messages.push({
             role: "tool",
             tool_name: toolCall.function.name,
@@ -66,17 +86,14 @@ export default async function run({
           });
         }
       } else if (part.message.content) {
-        ui.onResponseChunk(part.message.content);
-      } else {
-        ui.onDone();
-        console.log("Warning: unrecognized message");
-        console.log(part);
+        mode = "response";
+        yield { type: "response_chunk", text: part.message.content };
       }
     }
-    ui.onDone();
+    yield { type: "done" };
+
     if (fullResponse) {
       messages.push({ role: "assistant", content: fullResponse });
-      ui.onDone();
     }
   }
 }
