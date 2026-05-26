@@ -1,80 +1,111 @@
-import ollama from "./ollama";
 import chalk from "chalk";
-import { userInfo } from "os";
-import readline from "readline/promises";
-import { showError, showTimer, hideTimer } from "./util";
 import type { AgentEvent } from "./agent";
-import { modelRef } from "./index";
 import { clearHistory } from "./history";
 
-let contextUsed = 0;
+import {
+  Box,
+  createCliRenderer,
+  Text,
+  InputRenderableEvents,
+  InputRenderable,
+  ScrollBoxRenderable,
+} from "@opentui/core";
 
-function computeContextString(
-  contextUsed: number,
-  contextLength: number | undefined,
-): string {
-  if (!contextLength) return "--";
-  return (
-    (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(1) +
-    "%, " +
-    (contextUsed / 1000).toFixed(1) +
-    "k"
+// Promise-holding for prompt
+let resolvePromptPromise: (
+  value: string | PromiseLike<string>,
+) => void = () => {};
+let promptPromise = new Promise<string>((resolve) => {
+  resolvePromptPromise = resolve;
+});
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+});
+
+const input = new InputRenderable(renderer, {
+  id: "prompt-input",
+});
+input.on(InputRenderableEvents.ENTER, (value) => {
+  input.value = "";
+  history.add(Text({ content: value }));
+  resolvePromptPromise(value);
+  promptPromise = new Promise<string>((resolve) => {
+    resolvePromptPromise = resolve;
+  });
+});
+input.focus();
+
+const history = new ScrollBoxRenderable(renderer, {
+  flexDirection: "column",
+});
+
+const container = Box(
+  {
+    flexDirection: "column",
+  },
+  history,
+  input,
+);
+
+renderer.root.add(container);
+
+export async function prompt(): Promise<string | null> {
+  return promptPromise;
+}
+
+export function renderThinkingChunk(text: string) {
+  // process.stdout.write(chalk.gray(text));
+  history.add(Text({ content: chalk.gray(text) }));
+}
+
+export function renderResponseChunk(text: string) {
+  // process.stdout.write(text);
+  history.add(Text({ content: text }));
+}
+
+export function renderToolStart(toolName: string) {
+  // process.stdout.write(
+  //   `\n${chalk.green("tool(")}${chalk.gray(toolName)}${chalk.green(")")}\n`,
+  // );
+  history.add(
+    Text({
+      content: `\n${chalk.green("tool(")}${chalk.gray(toolName)}${chalk.green(")")}\n`,
+    }),
   );
 }
 
-export async function prompt(): Promise<string | null> {
-  process.stdout.write("\n");
-  let contextLength: number | undefined;
-  const ps = await ollama.ps();
-  const foundModel = ps.models.find(({ model: m }) => m === modelRef.current);
-  if (
-    foundModel &&
-    "context_length" in foundModel &&
-    typeof foundModel.context_length === "number"
-  ) {
-    contextLength = foundModel.context_length;
-  }
-  const contextString = computeContextString(contextUsed, contextLength);
+export function renderToolError(message: string) {
+  // showError(message);
+  history.add(Text({ content: `Tool error: ${message}` }));
+}
 
-  while (true) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.on("SIGINT", () => {
-      clearHistory();
-      console.log("\nBye!");
-      process.exit(0);
-    });
+export function startTtft() {
+  // showTimer();
+  history.add(Text({ content: "Start waiting for tokens..." }));
+}
 
-    const line = await rl.question(
-      `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
-    );
-    rl.close();
+export function endTtft() {
+  // hideTimer();
+  history.add(Text({ content: "Done waiting for tokens" }));
+}
 
-    if (line && line.startsWith("/")) {
-      const [command, ...args] = line.split(" ");
-      if (command === "/model") {
-        const models = (await ollama.list()).models.map((model) => model.name);
-        if (args.length === 0) {
-          console.log("Available models:\n");
-          console.log(models.join("\n"));
-        } else {
-          const newModel = args[0] as string;
-          if (!models.includes(newModel)) {
-            console.log(`Model not found: ${newModel}`);
-          } else {
-            console.log(`Model set to ${newModel}.`);
-            modelRef.current = newModel;
-          }
-        }
-      } else {
-        console.log(`Invalid command: ${command}`);
-      }
-      continue;
-    }
-    return line;
-  }
+export function finishResponse() {
+  // process.stdout.write("\n");
+}
+
+export function printThinkingHeader() {
+  // process.stdout.write(
+  //   `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
+  // );
+  history.add(Text({ content: "Start thinking" }));
+}
+
+export function startResponse() {
+  // process.stdout.write(
+  //   `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
+  // );
+  history.add(Text({ content: "Start response" }));
 }
 
 let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
@@ -82,43 +113,38 @@ let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 export function on(event: AgentEvent) {
   switch (event.type) {
     case "ttft_start":
-      process.stdout.write("\n");
-      showTimer();
+      startTtft();
       break;
     case "ttft_end":
-      hideTimer();
+      endTtft();
       break;
     case "context_used":
       contextUsed = event.count;
       break;
     case "thinking_chunk":
       if (mode !== "thinking") {
-        process.stdout.write(
-          `\n\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
-        );
+        printThinkingHeader();
         mode = "thinking";
       }
-      process.stdout.write(chalk.gray(event.text));
+      renderThinkingChunk(event.text);
       break;
     case "response_chunk":
       if (mode !== "response") {
-        process.stdout.write(
-          `\n\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
-        );
+        startResponse();
         mode = "response";
       }
-      process.stdout.write(event.text);
+      renderResponseChunk(event.text);
+      mode = "response";
       break;
     case "tool_start":
-      process.stdout.write(
-        `\n\n${chalk.green("tool(")}${chalk.gray(event.name)}${chalk.green(")")}\n`,
-      );
+      renderToolStart(event.name);
       mode = "tool";
       break;
     case "tool_error":
-      showError(event.message);
+      renderToolError(event.message);
       break;
     case "done":
+      finishResponse();
       mode = "prompt";
       break;
   }
