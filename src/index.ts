@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import run from "./agent";
 import { definitions, implementations } from "./tools";
-import { prompt, on } from "./ui";
+import { prompt, on } from "./ui/ui";
 
 export const modelRef = { current: "qwen3.6:27b-coding-nvfp4" };
 

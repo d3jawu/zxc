@@ -1,6 +1,9 @@
 import chalk from "chalk";
-import type { AgentEvent } from "./agent";
-import { clearHistory } from "./history";
+import type { AgentEvent } from "../agent";
+
+import { getPromise, resolve } from "./prompt";
+
+let contextUsed = 0;
 
 import {
   createCliRenderer,
@@ -16,14 +19,6 @@ import {
   SyntaxStyle,
 } from "@opentui/core";
 
-// Promise-holding for prompt
-let resolvePromptPromise: (
-  value: string | PromiseLike<string>,
-) => void = () => {};
-let promptPromise = new Promise<string>((resolve) => {
-  resolvePromptPromise = resolve;
-});
-
 const renderer = await createCliRenderer({
   exitOnCtrlC: true,
 });
@@ -34,10 +29,7 @@ const input = new InputRenderable(renderer, {
 input.on(InputRenderableEvents.ENTER, (value) => {
   input.value = "";
   history.add(Text({ content: value }));
-  resolvePromptPromise(value);
-  promptPromise = new Promise<string>((resolve) => {
-    resolvePromptPromise = resolve;
-  });
+  resolve(value);
 });
 input.focus();
 
@@ -56,7 +48,56 @@ container.add(input);
 renderer.root.add(container);
 
 export async function prompt(): Promise<string | null> {
-  return promptPromise;
+  /*
+  let contextLength: number | undefined;
+  const ps = await ollama.ps();
+  const foundModel = ps.models.find(({ model: m }) => m === model);
+  if (
+    foundModel &&
+    "context_length" in foundModel &&
+    typeof foundModel.context_length === "number"
+  ) {
+    contextLength = foundModel.context_length;
+  }
+  const contextString = computeContextString(contextUsed, contextLength);
+  while (true) {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.on("SIGINT", () => {
+      console.log("\nBye!");
+      process.exit(0);
+    });
+    const line = await rl.question(
+      `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
+    );
+    rl.close();
+    if (line && line.startsWith("/")) {
+      const [command, ...args] = line.split(" ");
+      if (command === "/model") {
+        const models = (await ollama.list()).models.map((model) => model.name);
+        if (args.length === 0) {
+          console.log("Available models:\n");
+          console.log(models.join("\n"));
+        } else {
+          const newModel = args[0] as string;
+          if (!models.includes(newModel)) {
+            console.log(`Model not found: ${newModel}`);
+          } else {
+            console.log(`Model set to ${newModel}.`);
+            modelRef.current = newModel;
+          }
+        }
+      } else {
+        console.log(`Invalid command: ${command}`);
+      }
+      continue;
+    }
+    return line;
+  }
+  */
+  return getPromise();
 }
 
 let currentBlock: TextRenderable | MarkdownRenderable;
@@ -66,6 +107,7 @@ const createThinkingBlock = () => {
     title: "Thinking",
     border: true,
     borderStyle: "single",
+    borderColor: "#999",
   });
 
   const block = new TextRenderable(renderer, {
