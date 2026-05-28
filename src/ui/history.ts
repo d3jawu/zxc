@@ -12,13 +12,14 @@ import renderer from "./renderer";
 
 import colors from "./colors";
 
+import { userInfo } from "os";
+
 const history = new ScrollBoxRenderable(renderer, {
   stickyScroll: true,
   stickyStart: "bottom",
 });
 
 export type ActiveBlock = {
-  renderable: TextRenderable | MarkdownRenderable;
   append: (text: string) => void; // appends text to current block, if applicable
   close: () => void; // close-out function to be called when the block is done being written to.
 };
@@ -75,7 +76,6 @@ export const createTimerBlock = (): ActiveBlock => {
   history.add(text);
 
   return {
-    renderable: text,
     append: () => {},
     close,
   };
@@ -91,7 +91,6 @@ export const createThinkingBlock = (): ActiveBlock => {
 
   history.add(block);
   return {
-    renderable: block,
     append: (text) => {
       content += text;
       block.content = t`${fg(colors.yellow)("model(")}${fg(colors.gray)("thinking")}${fg(colors.yellow)(")")}: ${content}`;
@@ -121,7 +120,6 @@ export const createResponseBlock = (): ActiveBlock => {
 
   history.add(box);
   return {
-    renderable: block,
     append: (text) => {
       content += text;
       block.content = content;
@@ -132,9 +130,10 @@ export const createResponseBlock = (): ActiveBlock => {
   };
 };
 
+const username = userInfo().username;
 export const createPromptBlock = (prompt: string) => {
   const block = new TextRenderable(renderer, {
-    content: prompt,
+    content: t`${fg(colors.purple)(username)}${fg(colors.gray)(":")} ${prompt}`,
     ...commonProperties,
   });
   history.add(block);
