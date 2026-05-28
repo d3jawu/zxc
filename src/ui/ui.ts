@@ -8,6 +8,7 @@ import history, {
   createResponseBlock,
   createThinkingBlock,
   createTimerBlock,
+  createToolBlock,
 } from "./history";
 import type { ActiveBlock } from "./history";
 
@@ -113,18 +114,16 @@ export const on = (event: AgentEvent) => {
       activeBlock.append(event.text);
       break;
     case "tool_start":
-      history.add(
-        Text({
-          content: `\n${chalk.green("tool(")}${chalk.gray(event.name)}${chalk.green(")")}\n`,
-        }),
-      );
+      createToolBlock(event.name);
       mode = "tool";
       break;
     case "tool_error":
       history.add(Text({ content: `Tool error: ${event.message}` }));
+      activeBlock.close();
       break;
     case "done":
       mode = "prompt";
+      activeBlock.close();
       break;
   }
 };

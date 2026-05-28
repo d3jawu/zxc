@@ -53,7 +53,7 @@ export const createTimerBlock = (): ActiveBlock => {
     } else {
       color = colors.red;
     }
-    text.content = t`Model running: ${fg(color)(`${elapsed.toFixed(2)}s`)}`;
+    text.content = t`${fg(colors.gray)("Model running:")} ${fg(color)(`${elapsed.toFixed(2)}s`)}`;
   }, 10);
 
   const close = () => {
@@ -93,7 +93,7 @@ export const createThinkingBlock = (): ActiveBlock => {
   return {
     append: (text) => {
       content += text;
-      block.content = t`${fg(colors.yellow)("model(")}${fg(colors.gray)("thinking")}${fg(colors.yellow)(")")}: ${content}`;
+      block.content = t`${fg(colors.yellow)("model(")}${fg(colors.gray)("thinking")}${fg(colors.yellow)(")")} ${content}`;
     },
     close: () => {},
   };
@@ -107,7 +107,7 @@ export const createResponseBlock = (): ActiveBlock => {
 
   box.add(
     new TextRenderable(renderer, {
-      content: t`${fg(colors.yellow)("model(")}${fg(colors.gray)("response")}${fg(colors.yellow)(")")}:`,
+      content: t`${fg(colors.yellow)("model(")}${fg(colors.gray)("response")}${fg(colors.yellow)(")")}`,
     }),
   );
 
@@ -133,7 +133,15 @@ export const createResponseBlock = (): ActiveBlock => {
 const username = userInfo().username;
 export const createPromptBlock = (prompt: string) => {
   const block = new TextRenderable(renderer, {
-    content: t`${fg(colors.purple)(username)}${fg(colors.gray)(":")} ${prompt}`,
+    content: t`${fg(colors.purple)(username)} ${prompt}`,
+    ...commonProperties,
+  });
+  history.add(block);
+};
+
+export const createToolBlock = (tool: string) => {
+  const block = new TextRenderable(renderer, {
+    content: t`${fg(colors.green)("tool(")}${fg(colors.gray)(tool)}${fg(colors.green)(")")}`,
     ...commonProperties,
   });
   history.add(block);
