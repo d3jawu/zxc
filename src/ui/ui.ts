@@ -13,7 +13,7 @@ import {
   ScrollBoxRenderable,
   TextRenderable,
   t,
-  bg,
+  fg,
   BoxRenderable,
   MarkdownRenderable,
   SyntaxStyle,
@@ -24,7 +24,9 @@ const renderer = await createCliRenderer({
 });
 
 const input = new InputRenderable(renderer, {
-  id: "prompt-input",
+  cursorStyle: {
+    style: "line",
+  },
 });
 input.on(InputRenderableEvents.ENTER, (value) => {
   input.value = "";
@@ -100,9 +102,68 @@ export async function prompt(): Promise<string | null> {
   return getPromise();
 }
 
-let currentBlock: TextRenderable | MarkdownRenderable;
+type ActiveBlock = {
+  renderable: TextRenderable | MarkdownRenderable;
+  append: (text: string) => void; // appends text to current block, if applicable
+  close: () => void; // close-out function to be called when the block is done being written to.
+};
 
-const createThinkingBlock = () => {
+let currentBlock: ActiveBlock;
+
+// TODO move these into their own module
+let runtimes: number[] = [];
+let maxRuntime = 0;
+const createTimerBlock = (): ActiveBlock => {
+  const text = new TextRenderable(renderer, {
+    content: "",
+  });
+
+  const startTime = Date.now();
+  let elapsed = 0;
+
+  const averageRunTime =
+    runtimes.reduce((val, sum) => val + sum, 0) / runtimes.length;
+
+  const intervalId = setInterval(() => {
+    elapsed = (Date.now() - startTime) / 1000;
+    let color: string;
+    if (elapsed <= averageRunTime) {
+      color = "#00ff00";
+    } else if (elapsed <= maxRuntime) {
+      color = "#e0ff66";
+    } else {
+      color = "#ff7b7b";
+    }
+    text.content = t`Model running: ${fg(color)(`${elapsed.toFixed(2)}s`)}`;
+  }, 10);
+
+  const close = () => {
+    clearInterval(intervalId);
+    let color: string;
+    if (elapsed <= averageRunTime) {
+      color = "#00ff00";
+    } else if (elapsed <= maxRuntime) {
+      color = "#e0ff66";
+    } else {
+      color = "#ff7b7b";
+    }
+    text.content = t`Model ran for: ${fg(color)(`${elapsed.toFixed(2)}s`)}`;
+    if (elapsed > maxRuntime) {
+      maxRuntime = elapsed;
+    }
+    runtimes.push(elapsed);
+  };
+
+  history.add(text);
+
+  return {
+    renderable: text,
+    append: () => {},
+    close,
+  };
+};
+
+const createThinkingBlock = (): ActiveBlock => {
   const box = new BoxRenderable(renderer, {
     title: "Thinking",
     border: true,
@@ -117,10 +178,21 @@ const createThinkingBlock = () => {
 
   box.add(block);
   history.add(box);
-  return block;
+  return {
+    renderable: block,
+    append: (text) => {
+      if (typeof block.content === "string") {
+        block.content = block.content + text;
+      } else {
+        const content = block.content.chunks.map((c) => c.text).join("");
+        block.content = content + text;
+      }
+    },
+    close: () => {},
+  };
 };
 
-const createResponseBlock = () => {
+const createResponseBlock = (): ActiveBlock => {
   const box = new BoxRenderable(renderer, {
     title: "Response",
     border: true,
@@ -134,7 +206,13 @@ const createResponseBlock = () => {
   });
   box.add(block);
   history.add(box);
-  return block;
+  return {
+    renderable: block,
+    append: (text) => {
+      block.content = block.content + text;
+    },
+    close: () => {},
+  };
 };
 
 const createPromptBlock = (prompt: string) => {};
@@ -144,10 +222,10 @@ let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 export const on = (event: AgentEvent) => {
   switch (event.type) {
     case "ttft_start":
-      history.add(Text({ content: "Start waiting for tokens..." }));
+      currentBlock = createTimerBlock();
       break;
     case "ttft_end":
-      history.add(Text({ content: "Done waiting for tokens" }));
+      currentBlock.close();
       break;
     case "context_used":
       contextUsed = event.count;
@@ -157,13 +235,7 @@ export const on = (event: AgentEvent) => {
         currentBlock = createThinkingBlock();
         mode = "thinking";
       }
-
-      if (typeof currentBlock.content === "string") {
-        currentBlock.content = currentBlock.content + event.text;
-      } else {
-        const content = currentBlock.content.chunks.map((c) => c.text).join("");
-        currentBlock.content = content + event.text;
-      }
+      currentBlock.append(event.text);
       break;
     case "response_chunk":
       if (mode !== "response") {
@@ -171,12 +243,7 @@ export const on = (event: AgentEvent) => {
         mode = "response";
       }
 
-      if (typeof currentBlock.content === "string") {
-        currentBlock.content = currentBlock.content + event.text;
-      } else {
-        const content = currentBlock.content.chunks.map((c) => c.text).join("");
-        currentBlock.content = content + event.text;
-      }
+      currentBlock.append(event.text);
       break;
     case "tool_start":
       history.add(
