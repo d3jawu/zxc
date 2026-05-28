@@ -17,10 +17,18 @@ import {
   BoxRenderable,
   MarkdownRenderable,
   SyntaxStyle,
+  type KeyEvent,
 } from "@opentui/core";
 
 const renderer = await createCliRenderer({
-  exitOnCtrlC: true,
+  exitOnCtrlC: false,
+});
+
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  if (key.ctrl && key.name === "c") {
+    renderer.destroy();
+    process.exit(0);
+  }
 });
 
 const input = new InputRenderable(renderer, {
