@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
-import { showError } from "./util";
 import chalk from "chalk";
 
 export const definitions: Tool[] = [
@@ -113,7 +112,7 @@ export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     console.log(`READ: ${file}`);
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      showError(`${file} does not exist, or is not a file.`);
+      // showError(`${file} does not exist, or is not a file.`);
       return `Error: "${file}" does not exist, or is not a file.`;
     }
     const contents = readFileSync(file, "utf-8");
@@ -125,7 +124,7 @@ export const implementations: Record<string, (args: any) => string> = {
     }
     console.log(`LIST: ${path}`);
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      showError(`${path} does not exist, or is not a directory.`);
+      // showError(`${path} does not exist, or is not a directory.`);
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
     return readdirSync(path).join(",");
@@ -143,13 +142,13 @@ export const implementations: Record<string, (args: any) => string> = {
       `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
     );
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      showError(`${file} does not exist, or is not a file.`);
+      // showError(`${file} does not exist, or is not a file.`);
       return `Error: File "${file}" does not exist.`;
     }
     const content = readFileSync(file, "utf-8");
 
     if (target === replacement) {
-      showError(`Replacement text is the same as target text.`);
+      // showError(`Replacement text is the same as target text.`);
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
     }
 
@@ -165,14 +164,8 @@ export const implementations: Record<string, (args: any) => string> = {
           `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
         );
       } else {
-        console.log(
-          "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
-        );
-        const reason = denyReason();
-        if (reason !== null) {
-          return `Error: Edit operation denied by user because: ${reason}`;
-        }
-        return "Edit succeeded.";
+        // showError(`Target text not found in ${file}.`);
+        return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
       }
     }
 
