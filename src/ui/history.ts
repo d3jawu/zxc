@@ -6,6 +6,7 @@ import {
   MarkdownRenderable,
   ScrollBoxRenderable,
   SyntaxStyle,
+  StyledText,
 } from "@opentui/core";
 
 import renderer from "./renderer";
@@ -131,12 +132,22 @@ export const createResponseBlock = (): ActiveBlock => {
 };
 
 const username = userInfo().username;
-export const createPromptBlock = (prompt: string) => {
-  const block = new TextRenderable(renderer, {
-    content: t`${fg(colors.purple)(username)} ${prompt}`,
+export const createPromptBlock = (prompt: string, prelude: StyledText) => {
+  const box = new BoxRenderable(renderer, {
+    flexDirection: "row",
     ...commonProperties,
   });
-  history.add(block);
+  box.add(
+    new TextRenderable(renderer, {
+      content: prelude,
+    }),
+  );
+  box.add(
+    new TextRenderable(renderer, {
+      content: prompt,
+    }),
+  );
+  const block = history.add(box);
 };
 
 export const createToolBlock = (tool: string) => {

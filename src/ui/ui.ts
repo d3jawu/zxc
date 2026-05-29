@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { AgentEvent } from "../agent";
 
-import textarea, { getPromise } from "./prompt";
+import textarea, { getPromise, setContextUsed } from "./prompt";
 
 import renderer from "./renderer";
 import history, {
@@ -27,30 +27,6 @@ renderer.root.add(container);
 
 export async function prompt(): Promise<string | null> {
   /*
-  let contextLength: number | undefined;
-  const ps = await ollama.ps();
-  const foundModel = ps.models.find(({ model: m }) => m === model);
-  if (
-    foundModel &&
-    "context_length" in foundModel &&
-    typeof foundModel.context_length === "number"
-  ) {
-    contextLength = foundModel.context_length;
-  }
-  const contextString = computeContextString(contextUsed, contextLength);
-  while (true) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.on("SIGINT", () => {
-      console.log("\nBye!");
-      process.exit(0);
-    });
-    const line = await rl.question(
-      `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
-    );
-    rl.close();
     if (line && line.startsWith("/")) {
       const [command, ...args] = line.split(" ");
       if (command === "/model") {
@@ -73,7 +49,6 @@ export async function prompt(): Promise<string | null> {
       continue;
     }
     return line;
-  }
   */
   return getPromise();
 }
@@ -91,7 +66,7 @@ export const on = (event: AgentEvent) => {
       activeBlock.close();
       break;
     case "context_used":
-      contextUsed = event.count;
+      setContextUsed(event.count);
       break;
     case "thinking_chunk":
       if (mode !== "thinking") {
