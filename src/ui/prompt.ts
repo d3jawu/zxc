@@ -1,7 +1,20 @@
-import { InputRenderable, InputRenderableEvents } from "@opentui/core";
+import {
+  t,
+  fg,
+  BoxRenderable,
+  InputRenderable,
+  InputRenderableEvents,
+  TextRenderable,
+  TextareaRenderable,
+} from "@opentui/core";
 
 import renderer from "./renderer";
 import { createPromptBlock } from "./history";
+
+import { userInfo } from "os";
+import colors from "./colors";
+
+import history from "./history";
 
 let resolver: (value: string | PromiseLike<string>) => void = () => {};
 
@@ -18,17 +31,37 @@ export const resolve = (value: string | PromiseLike<string>) => {
   });
 };
 
-const input = new InputRenderable(renderer, {
+const textarea = new TextareaRenderable(renderer, {
   cursorStyle: {
     style: "line",
   },
+  onSubmit: () => {
+    createPromptBlock(textarea.plainText);
+    resolve(textarea.plainText);
+    textarea.setText("");
+  },
+  keyBindings: [
+    {
+      name: "return",
+      action: "submit",
+    },
+  ],
 });
 
-input.on(InputRenderableEvents.ENTER, (value) => {
-  input.value = "";
-  createPromptBlock(value);
-  resolve(value);
-});
-input.focus();
+textarea.focus();
 
-export default input;
+const prelude = new TextRenderable(renderer, {
+  fg: colors.gray,
+  content: t`${fg(colors.purple)(userInfo().username)}: `,
+});
+
+const box = new BoxRenderable(renderer, {
+  flexDirection: "row",
+  onMouseDown: () => {
+    textarea.focus();
+  },
+});
+box.add(prelude);
+box.add(textarea);
+
+export default box;

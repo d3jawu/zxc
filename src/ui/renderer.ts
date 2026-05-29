@@ -5,6 +5,8 @@ const renderer = await createCliRenderer({
   exitOnCtrlC: false,
 });
 
+renderer.setTerminalTitle("agent");
+
 renderer.keyInput.on("keypress", (key: KeyEvent) => {
   if (key.ctrl && key.name === "c") {
     renderer.destroy();

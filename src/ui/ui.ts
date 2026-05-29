@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { AgentEvent } from "../agent";
 
-import input, { getPromise } from "./prompt";
+import textarea, { getPromise } from "./prompt";
 
 import renderer from "./renderer";
 import history, {
@@ -14,19 +14,14 @@ import type { ActiveBlock } from "./history";
 
 let contextUsed = 0;
 
-import {
-  Text,
-  InputRenderableEvents,
-  InputRenderable,
-  BoxRenderable,
-} from "@opentui/core";
+import { Text, BoxRenderable } from "@opentui/core";
 
 const container = new BoxRenderable(renderer, {
   flexDirection: "column",
   padding: 1,
 });
 container.add(history);
-container.add(input);
+container.add(textarea);
 
 renderer.root.add(container);
 
