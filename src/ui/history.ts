@@ -150,12 +150,27 @@ export const createPromptBlock = (prompt: string, prelude: StyledText) => {
   const block = history.add(box);
 };
 
-export const createToolBlock = (tool: string) => {
-  const block = new TextRenderable(renderer, {
-    content: t`${fg(colors.green)("tool(")}${fg(colors.gray)(tool)}${fg(colors.green)(")")}`,
+export const createToolBlock = (tool: string): ActiveBlock => {
+  const box = new BoxRenderable(renderer, {
+    flexDirection: "column",
     ...commonProperties,
   });
-  history.add(block);
+  const block = new TextRenderable(renderer, {
+    content: t`${fg(colors.green)("tool(")}${fg(colors.gray)(tool)}${fg(colors.green)(")")}`,
+  });
+  box.add(block);
+  history.add(box);
+  return {
+    append: (text: string) => {
+      box.add(
+        new MarkdownRenderable(renderer, {
+          content: text,
+          syntaxStyle: SyntaxStyle.fromStyles({}),
+        }),
+      );
+    },
+    close: () => {},
+  };
 };
 
 export default history;

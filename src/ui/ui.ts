@@ -1,5 +1,4 @@
-import chalk from "chalk";
-import type { AgentEvent } from "../agent";
+import type { AgentEvent } from "../types";
 
 import textarea, { getPromise, setContextUsed } from "./prompt";
 
@@ -84,8 +83,11 @@ export const on = (event: AgentEvent) => {
       activeBlock.append(event.text);
       break;
     case "tool_start":
-      createToolBlock(event.name);
+      activeBlock = createToolBlock(event.name);
       mode = "tool";
+      break;
+    case "tool_event":
+      activeBlock.append(event.text);
       break;
     case "tool_error":
       history.add(Text({ content: `Tool error: ${event.message}` }));

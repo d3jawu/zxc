@@ -3,6 +3,8 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
 
+import { on } from "./ui/ui";
+
 export const definitions: Tool[] = [
   {
     type: "function",
@@ -110,7 +112,7 @@ export const definitions: Tool[] = [
 
 export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
-    console.log(`READ: ${file}`);
+    on({ type: "tool_event", text: `READ: ${file}` });
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       // showError(`${file} does not exist, or is not a file.`);
       return `Error: "${file}" does not exist, or is not a file.`;
@@ -122,7 +124,7 @@ export const implementations: Record<string, (args: any) => string> = {
     if (!path) {
       path = process.cwd();
     }
-    console.log(`LIST: ${path}`);
+    on({ type: "tool_event", text: `LIST: ${path}` });
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
       // showError(`${path} does not exist, or is not a directory.`);
       return `Error: "${path}" does not exist, or is not a directory.`;
@@ -138,9 +140,10 @@ export const implementations: Record<string, (args: any) => string> = {
     target: string;
     replacement: string;
   }) => {
-    console.log(
-      `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
-    );
+    on({
+      type: "tool_event",
+      text: `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+    });
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       // showError(`${file} does not exist, or is not a file.`);
       return `Error: File "${file}" does not exist.`;
@@ -158,11 +161,12 @@ export const implementations: Record<string, (args: any) => string> = {
         match.slice(0, -1),
       );
       if (content.includes(correctedTarget)) {
-        console.log("Whitespace was corrected in target text.");
+        on({ type: "tool_event", text: "Whitespace was corrected in target text." });
         target = correctedTarget;
-        console.log(
-          `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
-        );
+        on({
+           type: "tool_event",
+           text: `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+         });
       } else {
         // showError(`Target text not found in ${file}.`);
         return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
@@ -183,7 +187,7 @@ export const implementations: Record<string, (args: any) => string> = {
     return "Edit succeeded.";
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    console.log(`WRITE: ${file}\n${contents}\n`);
+    on({ type: "tool_event", text: `WRITE: ${file}\n${contents}\n` });
 
     const reason = denyReason();
     if (reason !== null) {
@@ -194,7 +198,7 @@ export const implementations: Record<string, (args: any) => string> = {
     return "Write succeeded.";
   },
   bash: ({ command }: { command: string }) => {
-    console.log(`RUN: ${command}\n`);
+    on({ type: "tool_event", text: `RUN: ${command}\n` });
 
     const reason = denyReason();
     if (reason !== null) {
@@ -211,11 +215,11 @@ export const implementations: Record<string, (args: any) => string> = {
       } else {
         output = proc.stderr.toString();
       }
-      console.log("\n" + chalk.gray(output));
+      on({ type: "tool_event", text: "\n" + chalk.gray(output) });
       return output;
     } catch (e) {
-      console.log(e);
-      console.log(JSON.stringify(e));
+      on({ type: "tool_event", text: String(e) });
+      on({ type: "tool_event", text: JSON.stringify(e) });
       return `Bash operation failed: ${e}`;
     }
   },

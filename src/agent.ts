@@ -1,21 +1,12 @@
 import { createMessageHistory } from "./history";
 import ollama from "./ollama";
 import type { Message, Tool } from "ollama";
+import type { AgentEvent } from "./types";
 
 export type ToolSet = {
   definitions: Tool[];
   implementations: Record<string, (args: any) => Promise<string> | string>;
 };
-
-export type AgentEvent =
-  | { type: "ttft_start" }
-  | { type: "ttft_end" }
-  | { type: "context_used"; count: number }
-  | { type: "thinking_chunk"; text: string }
-  | { type: "tool_start"; name: string }
-  | { type: "tool_error"; message: string }
-  | { type: "response_chunk"; text: string }
-  | { type: "done" };
 
 type AgentOptions = {
   systemPrompt: string;

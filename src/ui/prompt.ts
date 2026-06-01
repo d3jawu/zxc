@@ -2,8 +2,6 @@ import {
   t,
   fg,
   BoxRenderable,
-  InputRenderable,
-  InputRenderableEvents,
   TextRenderable,
   TextareaRenderable,
 } from "@opentui/core";
@@ -13,8 +11,6 @@ import { createPromptBlock } from "./history";
 
 import { userInfo } from "os";
 import colors from "./colors";
-
-import history from "./history";
 
 import ollama from "../ollama";
 
