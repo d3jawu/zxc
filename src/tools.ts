@@ -3,7 +3,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
 
-import { on } from "./ui/ui";
+import { confirm, on } from "./ui/ui";
 
 export const definitions: Tool[] = [
   {
@@ -110,8 +110,8 @@ export const definitions: Tool[] = [
   },
 ];
 
-export const implementations: Record<string, (args: any) => string> = {
-  read: ({ file }: { file: string }) => {
+export const implementations: Record<string, (args: any) => Promise<string>> = {
+  read: async ({ file }: { file: string }) => {
     on({ type: "tool_event", text: `READ: ${file}` });
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       // showError(`${file} does not exist, or is not a file.`);
@@ -120,7 +120,7 @@ export const implementations: Record<string, (args: any) => string> = {
     const contents = readFileSync(file, "utf-8");
     return contents;
   },
-  list: ({ path }: { path?: string }) => {
+  list: async ({ path }: { path?: string }) => {
     if (!path) {
       path = process.cwd();
     }
@@ -131,7 +131,7 @@ export const implementations: Record<string, (args: any) => string> = {
     }
     return readdirSync(path).join(",");
   },
-  edit: ({
+  edit: async ({
     file,
     target,
     replacement,
@@ -161,12 +161,15 @@ export const implementations: Record<string, (args: any) => string> = {
         match.slice(0, -1),
       );
       if (content.includes(correctedTarget)) {
-        on({ type: "tool_event", text: "Whitespace was corrected in target text." });
+        on({
+          type: "tool_event",
+          text: "Whitespace was corrected in target text.",
+        });
         target = correctedTarget;
         on({
-           type: "tool_event",
-           text: `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
-         });
+          type: "tool_event",
+          text: `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+        });
       } else {
         // showError(`Target text not found in ${file}.`);
         return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
@@ -176,7 +179,7 @@ export const implementations: Record<string, (args: any) => string> = {
     target = target.trim();
     replacement = replacement.trim();
 
-    const reason = denyReason();
+    const reason = await confirm();
     if (reason !== null) {
       return `Error: Edit operation denied by user because: ${reason}`;
     }
@@ -186,10 +189,10 @@ export const implementations: Record<string, (args: any) => string> = {
     });
     return "Edit succeeded.";
   },
-  write: ({ file, contents }: { file: string; contents: string }) => {
+  write: async ({ file, contents }: { file: string; contents: string }) => {
     on({ type: "tool_event", text: `WRITE: ${file}\n${contents}\n` });
 
-    const reason = denyReason();
+    const reason = await confirm();
     if (reason !== null) {
       return `Error: Write operation denied by user because: ${reason}`;
     }
@@ -197,10 +200,10 @@ export const implementations: Record<string, (args: any) => string> = {
     writeFileSync(file, contents, { encoding: "utf-8" });
     return "Write succeeded.";
   },
-  bash: ({ command }: { command: string }) => {
+  bash: async ({ command }: { command: string }) => {
     on({ type: "tool_event", text: `RUN: ${command}\n` });
 
-    const reason = denyReason();
+    const reason = await confirm();
     if (reason !== null) {
       return `Error: Bash operation denied by user because: ${reason}`;
     }
@@ -224,9 +227,3 @@ export const implementations: Record<string, (args: any) => string> = {
     }
   },
 };
-
-// Reusable function to get confirmation or denial reason
-function denyReason(): string | null {
-  const input = prompt("Confirm (↵) or deny (give reason):");
-  return input?.trim() || null;
-}

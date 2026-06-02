@@ -87,6 +87,7 @@ export const setContextUsed = async (contextUsed: number) => {
 setContextUsed(0);
 
 const box = new BoxRenderable(renderer, {
+  id: "input",
   flexDirection: "row",
   onMouseDown: () => {
     textarea.focus();

@@ -1,6 +1,11 @@
-import type { AgentEvent } from "../types";
+import type { AgentEvent, ConfirmResult } from "../types";
 
-import textarea, { getPromise, setContextUsed } from "./prompt";
+import promptRenderable, {
+  getPromise as getPromptPromise,
+  setContextUsed,
+} from "./prompt";
+
+import confirmRenderable, { getPromise as getConfirmPromise } from "./confirm";
 
 import renderer from "./renderer";
 import history, {
@@ -11,8 +16,6 @@ import history, {
 } from "./history";
 import type { ActiveBlock } from "./history";
 
-let contextUsed = 0;
-
 import { Text, BoxRenderable } from "@opentui/core";
 
 const container = new BoxRenderable(renderer, {
@@ -20,8 +23,6 @@ const container = new BoxRenderable(renderer, {
   padding: 1,
 });
 container.add(history);
-container.add(textarea);
-
 renderer.root.add(container);
 
 export async function prompt(): Promise<string | null> {
@@ -49,7 +50,15 @@ export async function prompt(): Promise<string | null> {
     }
     return line;
   */
-  return getPromise();
+  container.remove("input");
+  container.add(promptRenderable);
+  return getPromptPromise();
+}
+
+export async function confirm(): Promise<ConfirmResult> {
+  container.remove("input");
+  container.add(confirmRenderable);
+  return getConfirmPromise();
 }
 
 let activeBlock: ActiveBlock;
@@ -59,6 +68,7 @@ let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 export const on = (event: AgentEvent) => {
   switch (event.type) {
     case "ttft_start":
+      container.remove("input");
       activeBlock = createTimerBlock();
       break;
     case "ttft_end":
@@ -69,6 +79,7 @@ export const on = (event: AgentEvent) => {
       break;
     case "thinking_chunk":
       if (mode !== "thinking") {
+        container.remove("input");
         activeBlock = createThinkingBlock();
         mode = "thinking";
       }
@@ -76,6 +87,7 @@ export const on = (event: AgentEvent) => {
       break;
     case "response_chunk":
       if (mode !== "response") {
+        container.remove("input");
         activeBlock = createResponseBlock();
         mode = "response";
       }
@@ -83,6 +95,7 @@ export const on = (event: AgentEvent) => {
       activeBlock.append(event.text);
       break;
     case "tool_start":
+      container.remove("input");
       activeBlock = createToolBlock(event.name);
       mode = "tool";
       break;
@@ -95,6 +108,7 @@ export const on = (event: AgentEvent) => {
       break;
     case "done":
       mode = "prompt";
+      container.add(promptRenderable);
       activeBlock.close();
       break;
   }

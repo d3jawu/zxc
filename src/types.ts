@@ -8,3 +8,5 @@ export type AgentEvent =
   | { type: "tool_error"; message: string }
   | { type: "response_chunk"; text: string }
   | { type: "done" };
+
+export type ConfirmResult = string | null;
