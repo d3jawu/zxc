@@ -12,6 +12,10 @@ if (existsSync(HISTORY_FILE)) {
   ) as Message[];
   history.push(...fileHistory);
   console.log("Resuming interrupted session.");
+  const lastMessage = history[history.length - 1];
+  console.log(
+    `Left off at ${lastMessage?.role}: "${lastMessage?.content.slice(0, 80)}..."`,
+  );
 }
 
 export function pushHistory(message: Message): void {
