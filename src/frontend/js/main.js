@@ -1,4 +1,5 @@
 import * as components from "./components.js";
+import ws from "./ws.js";
 /** @typedef { import("../../agent").AgentEvent} AgentEvent */
 
 /** @type {import("./types.js").HistoryElement} */
@@ -8,6 +9,7 @@ ws.onmessage =
   /** @param {MessageEvent<AgentEvent>} message */
   (message) => {
     const event = message.data;
+    console.log(event);
     switch (event.type) {
       case "ttft_start":
         currentElement = components.createTimer();

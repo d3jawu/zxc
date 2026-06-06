@@ -39,5 +39,6 @@ const agent = run({
 });
 
 for await (const event of agent) {
+  ws.send(JSON.stringify(event));
   on(event);
 }
