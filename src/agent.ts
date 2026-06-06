@@ -1,6 +1,6 @@
-import { createMessageHistory } from "./history";
+import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
-import type { Message, Tool } from "ollama";
+import type { Tool } from "ollama";
 
 export type ToolSet = {
   definitions: Tool[];
@@ -32,9 +32,8 @@ export default async function* run({
 }: AgentOptions): AsyncGenerator<AgentEvent> {
   console.log(`Using ${model}.`);
   // const messages: Message[] = [{ role: "system", content: systemPrompt }];
-  const history = createMessageHistory();
-  if (history.messages.length === 0) {
-    history.push({ role: "system", content: systemPrompt });
+  if (getHistory().length === 0) {
+    pushHistory({ role: "system", content: systemPrompt });
   }
   // Whether to loop again for a tool call.
   let tool = false;
@@ -45,14 +44,14 @@ export default async function* run({
       while (!line) {
         line = await prompt();
       }
-      history.push({ role: "user", content: line });
+      pushHistory({ role: "user", content: line });
     }
 
     yield { type: "ttft_start" };
     const response = await ollama.chat({
       model,
       stream: true,
-      messages: history.messages,
+      messages: getHistory(),
       tools: toolset.definitions,
       think: true,
       keep_alive: "20m",
@@ -72,7 +71,7 @@ export default async function* run({
         yield { type: "thinking_chunk", text: part.message.thinking };
       } else if (part.message.tool_calls) {
         tool = true;
-        history.push(part.message);
+        pushHistory(part.message);
         for (const toolCall of part.message.tool_calls) {
           yield { type: "tool_start", name: toolCall.function.name };
           const toolFn = toolset.implementations[toolCall.function.name];
@@ -81,7 +80,7 @@ export default async function* run({
               type: "tool_error",
               message: `Attempted to call invalid tool: ${toolCall.function.name}`,
             };
-            history.push({
+            pushHistory({
               role: "tool",
               tool_name: toolCall.function.name,
               content: "",
@@ -89,7 +88,7 @@ export default async function* run({
             continue;
           }
           const toolResponse = await toolFn(toolCall.function.arguments);
-          history.push({
+          pushHistory({
             role: "tool",
             tool_name: toolCall.function.name,
             content: toolResponse,
@@ -102,7 +101,7 @@ export default async function* run({
     yield { type: "done" };
 
     if (fullResponse) {
-      history.push({ role: "assistant", content: fullResponse });
+      pushHistory({ role: "assistant", content: fullResponse });
     }
   }
 }

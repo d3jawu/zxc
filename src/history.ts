@@ -4,36 +4,28 @@ import { join } from "path";
 
 const HISTORY_FILE = join(process.cwd(), ".history.json");
 
-export function createMessageHistory() {
-  let messages: Message[] = [];
+const history: Message[] = [];
 
-  if (existsSync(HISTORY_FILE)) {
-    const history = JSON.parse(
-      readFileSync(HISTORY_FILE, "utf-8"),
-    ) as Message[];
-    messages.push(...history);
-    console.log("Resuming interrupted session.");
-  }
-
-  return {
-    push(message: Message): void {
-      messages.push(message);
-      writeFileSync(HISTORY_FILE, JSON.stringify(messages, null, 2), "utf-8");
-    },
-
-    get messages(): Message[] {
-      return messages;
-    },
-
-    clear(): void {
-      messages = [];
-    },
-  };
+if (existsSync(HISTORY_FILE)) {
+  const fileHistory = JSON.parse(
+    readFileSync(HISTORY_FILE, "utf-8"),
+  ) as Message[];
+  history.push(...fileHistory);
+  console.log("Resuming interrupted session.");
 }
 
-export function clearHistory() {
-  if (!existsSync(HISTORY_FILE)) {
-    return;
+export function pushHistory(message: Message): void {
+  history.push(message);
+  writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), "utf-8");
+}
+
+export function getHistory(): Message[] {
+  return history;
+}
+
+export function clearHistory(): void {
+  history.length = 0;
+  if (existsSync(HISTORY_FILE)) {
+    rmSync(HISTORY_FILE);
   }
-  rmSync(HISTORY_FILE);
 }
