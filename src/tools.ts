@@ -3,6 +3,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import { showError } from "./util";
 import chalk from "chalk";
+import highlight from "cli-highlight";
 
 export const definitions: Tool[] = [
   {
@@ -140,7 +141,7 @@ export const implementations: Record<string, (args: any) => string> = {
     replacement: string;
   }) => {
     console.log(
-      `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+      `EDIT: ${file}:\n...\n${highlight(target, { ignoreIllegals: true })}\n...\n\nINTO:\n...\n${highlight(replacement, { ignoreIllegals: true })}\n...\n`,
     );
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
       showError(`${file} does not exist, or is not a file.`);
@@ -161,9 +162,6 @@ export const implementations: Record<string, (args: any) => string> = {
       if (content.includes(correctedTarget)) {
         console.log("Whitespace was corrected in target text.");
         target = correctedTarget;
-        console.log(
-          `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
-        );
       } else {
         console.log(
           "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
@@ -190,7 +188,9 @@ export const implementations: Record<string, (args: any) => string> = {
     return "Edit succeeded.";
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    console.log(`WRITE: ${file}\n${contents}\n`);
+    console.log(
+      `WRITE: ${file}\n${highlight(contents, { ignoreIllegals: true })}\n`,
+    );
 
     const reason = denyReason();
     if (reason !== null) {
