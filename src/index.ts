@@ -23,7 +23,8 @@ Guidelines:
 - Use write only for new files or complete rewrites
 - When summarizing your actions, output plain text directly - do not use cat or bash to display what you did
 - Be very concise in your responses
-- Show file paths clearly when working with files`;
+- Show file paths clearly when working with files
+- If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`;
 
 let contextUsed = 0;
 let mode: "thinking" | "response" | "tool" | "prompt" | undefined;

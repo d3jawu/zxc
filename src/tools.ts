@@ -165,8 +165,14 @@ export const implementations: Record<string, (args: any) => string> = {
           `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
         );
       } else {
-        showError(`Target text not found in ${file}.`);
-        return `Error: match for target text not found. Target text must match exactly, including whitespace.`;
+        console.log(
+          "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
+        );
+        const reason = denyReason();
+        if (reason !== null) {
+          return `Error: Edit operation denied by user because: ${reason}`;
+        }
+        return "Edit succeeded.";
       }
     }
 

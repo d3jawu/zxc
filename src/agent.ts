@@ -48,6 +48,7 @@ export default async function* run({
       messages,
       tools: toolset.definitions,
       think: true,
+      keep_alive: "20m",
     });
     yield { type: "ttft_end" };
 
