@@ -10,6 +10,7 @@ export const createPrompt = () => {
   $prompt.className = "history-prompt";
 
   const $input = document.createElement("input");
+
   $input.onsubmit = () => {
     const $p = document.createElement("p");
     $p.innerText = $input.value;
@@ -19,9 +20,41 @@ export const createPrompt = () => {
   };
 
   $prompt.appendChild($input);
+  $input.focus();
 
   return { type: /** @type {const} */ ("prompt") };
 };
+
+export const createTimer =
+  /**
+   * @returns {import("./types").Timer}
+   */
+  () => {
+    const $timer = document.createElement("div");
+    $timer.className = "history-timer";
+
+    const $timerContent = document.createElement("span");
+    $timerContent.className = "history-timer-content";
+
+    let startTime = Date.now();
+    let stopped = false;
+    const interval = setInterval(() => {
+      if (stopped) return;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      $timerContent.textContent = `${elapsed}s`;
+    }, 1000);
+
+    $timer.appendChild($timerContent);
+    $history.appendChild($timer);
+
+    return {
+      type: "timer",
+      stop: () => {
+        stopped = true;
+        clearInterval(interval);
+      },
+    };
+  };
 
 export const createToolUse =
   /**

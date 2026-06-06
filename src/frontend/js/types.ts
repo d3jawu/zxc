@@ -1,4 +1,14 @@
-export type HistoryElement = { type: "prompt" } | ToolUse;
+export type HistoryElement =
+  | { type: "prompt" }
+  | Timer
+  | ToolUse
+  | Thinking
+  | Response;
+
+export type Timer = {
+  type: "timer";
+  stop: () => void;
+};
 
 export type Tool =
   | {

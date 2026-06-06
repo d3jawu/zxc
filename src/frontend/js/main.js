@@ -1,10 +1,35 @@
 import * as components from "./components.js";
 /** @typedef { import("../../agent").AgentEvent} AgentEvent */
 
+/** @type {import("./types.js").HistoryElement} */
+let currentElement;
+
 ws.onmessage =
-  /** @param {MessageEvent<AgentEvent>} event */
-  function (event) {
-    const div = document.createElement("div");
-    div.textContent = JSON.stringify(event.data);
-    document.body.appendChild(div);
+  /** @param {MessageEvent<AgentEvent>} message */
+  (message) => {
+    const event = message.data;
+    switch (event.type) {
+      case "ttft_start":
+        currentElement = components.createTimer();
+        break;
+      case "ttft_end":
+        if (currentElement.type !== "timer") {
+          throw new Error(`Expected timer but got ${currentElement.type}`);
+        }
+
+        currentElement.stop();
+        break;
+      case "context_used":
+        break;
+      case "thinking_chunk":
+        break;
+      case "response_chunk":
+        break;
+      case "tool_start":
+        break;
+      case "tool_error":
+        break;
+      case "done":
+        break;
+    }
   };
