@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
-import { showError } from "./util";
 import chalk from "chalk";
 import highlight from "cli-highlight";
 
@@ -114,7 +113,7 @@ export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     console.log(`READ: ${file}`);
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      showError(`${file} does not exist, or is not a file.`);
+      console.log(`${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`);
       return `Error: "${file}" does not exist, or is not a file.`;
     }
     const contents = readFileSync(file, "utf-8");
@@ -126,7 +125,7 @@ export const implementations: Record<string, (args: any) => string> = {
     }
     console.log(`LIST: ${path}`);
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      showError(`${path} does not exist, or is not a directory.`);
+      console.log(`${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`);
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
     return readdirSync(path).join(",");
@@ -144,13 +143,13 @@ export const implementations: Record<string, (args: any) => string> = {
       `EDIT: ${file}:\n...\n${highlight(target, { ignoreIllegals: true })}\n...\n\nINTO:\n...\n${highlight(replacement, { ignoreIllegals: true })}\n...\n`,
     );
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      showError(`${file} does not exist, or is not a file.`);
+      console.log(`${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`);
       return `Error: File "${file}" does not exist.`;
     }
     const content = readFileSync(file, "utf-8");
 
     if (target === replacement) {
-      showError(`Replacement text is the same as target text.`);
+      console.log(`${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`);
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
     }
 
