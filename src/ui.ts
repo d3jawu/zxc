@@ -5,7 +5,7 @@ import readline from "readline/promises";
 import { showError, showTimer, hideTimer } from "./util";
 import type { AgentEvent } from "./agent";
 import { modelRef } from "./index";
-import ansi from "ansi-escape-sequences";
+import { clearHistory } from "./history";
 
 let contextUsed = 0;
 
@@ -42,6 +42,7 @@ export async function prompt(): Promise<string | null> {
       output: process.stdout,
     });
     rl.on("SIGINT", () => {
+      clearHistory();
       console.log("\nBye!");
       process.exit(0);
     });
