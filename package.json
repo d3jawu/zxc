@@ -1,5 +1,5 @@
 {
-  "name": "agent",
+  "name": "zxc",
   "scripts": {
     "start": "bun run src/index.ts"
   },
