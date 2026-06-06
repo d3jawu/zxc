@@ -3,6 +3,10 @@ import chalk from "chalk";
 import { userInfo } from "os";
 import readline from "readline/promises";
 import { showError, showTimer, hideTimer } from "./util";
+import type { AgentEvent } from "./agent";
+import { modelRef } from "./index";
+
+let contextUsed = 0;
 
 function computeContextString(
   contextUsed: number,
@@ -17,14 +21,10 @@ function computeContextString(
   );
 }
 
-export async function promptUser(
-  model: string,
-  contextUsed: number,
-  modelRef: { current: string },
-): Promise<string | null> {
+export async function prompt(): Promise<string | null> {
   let contextLength: number | undefined;
   const ps = await ollama.ps();
-  const foundModel = ps.models.find(({ model: m }) => m === model);
+  const foundModel = ps.models.find(({ model: m }) => m === modelRef.current);
   if (
     foundModel &&
     "context_length" in foundModel &&
@@ -74,44 +74,49 @@ export async function promptUser(
   }
 }
 
-export function renderThinkingChunk(text: string) {
-  process.stdout.write(chalk.gray(text));
-}
+let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 
-export function renderResponseChunk(text: string) {
-  process.stdout.write(text);
-}
-
-export function renderToolStart(toolName: string) {
-  process.stdout.write(
-    `\n${chalk.green("tool(")}${chalk.gray(toolName)}${chalk.green(")")}\n`,
-  );
-}
-
-export function renderToolError(message: string) {
-  showError(message);
-}
-
-export function startTtft() {
-  showTimer();
-}
-
-export function endTtft() {
-  hideTimer();
-}
-
-export function finishResponse() {
-  process.stdout.write("\n");
-}
-
-export function printThinkingHeader() {
-  process.stdout.write(
-    `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
-  );
-}
-
-export function printResponseHeader() {
-  process.stdout.write(
-    `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
-  );
+export function on(event: AgentEvent) {
+  switch (event.type) {
+    case "ttft_start":
+      showTimer();
+      break;
+    case "ttft_end":
+      hideTimer();
+      break;
+    case "context_used":
+      contextUsed = event.count;
+      break;
+    case "thinking_chunk":
+      if (mode !== "thinking") {
+        process.stdout.write(
+          `\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
+        );
+        mode = "thinking";
+      }
+      process.stdout.write(chalk.gray(event.text));
+      break;
+    case "response_chunk":
+      if (mode !== "response") {
+        process.stdout.write(
+          `\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
+        );
+        mode = "response";
+      }
+      process.stdout.write(event.text);
+      break;
+    case "tool_start":
+      process.stdout.write(
+        `\n${chalk.green("tool(")}${chalk.gray(event.name)}${chalk.green(")")}\n`,
+      );
+      mode = "tool";
+      break;
+    case "tool_error":
+      showError(event.message);
+      break;
+    case "done":
+      process.stdout.write("\n");
+      mode = "prompt";
+      break;
+  }
 }

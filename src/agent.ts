@@ -20,14 +20,14 @@ type AgentOptions = {
   systemPrompt: string;
   model: string;
   toolset: ToolSet;
-  promptProvider: (model: string) => Promise<string | null>;
+  prompt: () => Promise<string | null>;
 };
 
 export default async function* run({
   model,
   systemPrompt,
   toolset,
-  promptProvider,
+  prompt,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
   let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
@@ -36,7 +36,7 @@ export default async function* run({
     if (mode !== "tool") {
       let line: string | null = null;
       while (!line) {
-        line = await promptProvider(model);
+        line = await prompt();
       }
       messages.push({ role: "user", content: line });
     }
