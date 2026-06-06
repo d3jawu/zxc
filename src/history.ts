@@ -24,8 +24,8 @@ export function getHistory(): Message[] {
 }
 
 export function clearHistory(): void {
-  history.length = 0;
   if (existsSync(HISTORY_FILE)) {
+    console.log("Ending session.");
     rmSync(HISTORY_FILE);
   }
 }

@@ -9,19 +9,6 @@ import { clearHistory } from "./history";
 
 let contextUsed = 0;
 
-function computeContextString(
-  contextUsed: number,
-  contextLength: number | undefined,
-): string {
-  if (!contextLength) return "--";
-  return (
-    (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(1) +
-    "%, " +
-    (contextUsed / 1000).toFixed(1) +
-    "k"
-  );
-}
-
 export async function prompt(): Promise<string | null> {
   process.stdout.write("\n");
   let contextLength: number | undefined;
@@ -34,7 +21,12 @@ export async function prompt(): Promise<string | null> {
   ) {
     contextLength = foundModel.context_length;
   }
-  const contextString = computeContextString(contextUsed, contextLength);
+  const contextString = !contextLength
+    ? "--"
+    : (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(1) +
+      "%, " +
+      (contextUsed / 1000).toFixed(1) +
+      "k";
 
   while (true) {
     const rl = readline.createInterface({
@@ -43,7 +35,6 @@ export async function prompt(): Promise<string | null> {
     });
     rl.on("SIGINT", () => {
       clearHistory();
-      console.log("\nBye!");
       process.exit(0);
     });
 
