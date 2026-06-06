@@ -5,7 +5,16 @@ import readline from "readline/promises";
 import { showError, showTimer, hideTimer } from "./util";
 import type { AgentEvent } from "./agent";
 import { modelRef } from "./index";
-import { clearHistory } from "./history";
+import { clearHistory, getHistory } from "./history";
+import { spawnSync } from "child_process";
+
+const glowAvailable =
+  spawnSync("glow", ["--version"], { encoding: "utf-8" }).status === 0;
+if (!glowAvailable) {
+  console.error(
+    "Warning: 'glow' is not installed. MarkDown preview (/md) will be unavailable.",
+  );
+}
 
 let contextUsed = 0;
 
@@ -58,6 +67,19 @@ export async function prompt(): Promise<string | null> {
             console.log(`Model set to ${newModel}.`);
             modelRef.current = newModel;
           }
+        }
+      } else if (command === "/md") {
+        if (!glowAvailable) {
+          console.log("'glow' is unavailable, cannot display MarkDown.");
+        }
+        const history = getHistory();
+        const lastMessage = history[history.length - 1];
+        if (lastMessage) {
+          spawnSync("glow", [], {
+            input: lastMessage.content,
+            encoding: "utf-8",
+            stdio: "inherit",
+          });
         }
       } else {
         console.log(`Invalid command: ${command}`);

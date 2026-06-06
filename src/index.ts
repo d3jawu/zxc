@@ -24,6 +24,7 @@ Guidelines:
 - When summarizing your actions, output plain text directly - do not use cat or bash to display what you did
 - Be very concise in your responses
 - Show file paths clearly when working with files
+- Work in the current directory, do not cd into others
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`;
 
 const agent = run({
