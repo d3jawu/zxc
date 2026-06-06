@@ -29,11 +29,13 @@ export default async function* run({
   toolset,
   prompt,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
+  console.log(`Using ${model}.`);
   const messages: Message[] = [{ role: "system", content: systemPrompt }];
-  let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
+  // Whether to loop again for a tool call.
+  let tool = false;
 
   while (true) {
-    if (mode !== "tool") {
+    if (!tool) {
       let line: string | null = null;
       while (!line) {
         line = await prompt();
@@ -54,15 +56,17 @@ export default async function* run({
 
     let fullResponse = "";
     for await (const part of response) {
-      yield { type: "context_used", count: part.prompt_eval_count };
+      if (part.prompt_eval_count !== undefined) {
+        yield { type: "context_used", count: part.prompt_eval_count };
+      }
       if (part.done) continue;
 
       fullResponse += part.message.content;
+      tool = false;
       if (part.message.thinking) {
-        mode = "thinking";
         yield { type: "thinking_chunk", text: part.message.thinking };
       } else if (part.message.tool_calls) {
-        mode = "tool";
+        tool = true;
         messages.push(part.message);
         for (const toolCall of part.message.tool_calls) {
           yield { type: "tool_start", name: toolCall.function.name };
@@ -87,7 +91,6 @@ export default async function* run({
           });
         }
       } else if (part.message.content) {
-        mode = "response";
         yield { type: "response_chunk", text: part.message.content };
       }
     }

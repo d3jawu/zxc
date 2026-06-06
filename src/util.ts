@@ -34,6 +34,6 @@ export const hideTimer = () => {
     maxRunTime = elapsed;
   }
   runTimes.push(elapsed);
-  process.stdout.write(`${ansi.style.reset}\n`);
+  process.stdout.write(ansi.style.reset);
   clearInterval(spinnerId);
 };
