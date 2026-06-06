@@ -3,6 +3,8 @@ import run from "./agent";
 import { definitions, implementations } from "./tools";
 import { prompt, on } from "./ui";
 
+import { ws } from "./server";
+
 export const modelRef = { current: "qwen3.6:27b-coding-nvfp4" };
 
 const systemPrompt = `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
