@@ -13,6 +13,11 @@ const runTimes: number[] = [];
 let maxRunTime = 0;
 let elapsed = 0;
 
+const green = chalk.hex("#50fa7b");
+const yellow = chalk.hex("#f1fa8c");
+const red = chalk.hex("#ff5555");
+const purple = chalk.hex("#bd93f9");
+
 const showTimer = () => {
   const startTime = Date.now();
   const averageRunTime =
@@ -21,11 +26,11 @@ const showTimer = () => {
     elapsed = (Date.now() - startTime) / 1000;
     let color: ChalkInstance;
     if (elapsed <= averageRunTime) {
-      color = chalk.green;
+      color = green;
     } else if (elapsed <= maxRunTime) {
-      color = chalk.yellow;
+      color = yellow;
     } else {
-      color = chalk.red;
+      color = red;
     }
     process.stdout.write(
       `${ansi.cursor.back(100)}${chalk.gray("Model running")} ${color(elapsed.toFixed(2) + "s")}`,
@@ -74,7 +79,7 @@ export async function prompt(): Promise<string | null> {
     });
 
     const line = await rl.question(
-      `${chalk.blueBright(userInfo().username + "(")}${chalk.gray(contextString)}${chalk.blueBright(")")}: `,
+      `${purple(userInfo().username + "(")}${chalk.gray(contextString)}${purple(")")}: `,
     );
     rl.close();
 
@@ -132,7 +137,7 @@ export function on(event: AgentEvent) {
     case "thinking_chunk":
       if (mode !== "thinking") {
         process.stdout.write(
-          `\n\n${chalk.yellow("model(")}${chalk.gray("thinking")}${chalk.yellow(")")}: `,
+          `\n\n${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `,
         );
         mode = "thinking";
       }
@@ -141,7 +146,7 @@ export function on(event: AgentEvent) {
     case "response_chunk":
       if (mode !== "response") {
         process.stdout.write(
-          `\n\n${chalk.yellow("model(")}${chalk.gray("response")}${chalk.yellow(")")}: `,
+          `\n\n${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `,
         );
         mode = "response";
       }
@@ -149,7 +154,7 @@ export function on(event: AgentEvent) {
       break;
     case "tool_start":
       process.stdout.write(
-        `\n\n${chalk.green("tool(")}${chalk.gray(event.name)}${chalk.green(")")}\n`,
+        `\n\n${green("tool(")}${chalk.gray(event.name)}${green(")")}\n`,
       );
       mode = "tool";
       break;
