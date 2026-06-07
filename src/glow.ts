@@ -10,11 +10,15 @@ if (!glowAvailable) {
 
 const glow = glowAvailable
   ? (input: string) => {
-      spawnSync("glow", ["-s", "dracula"], {
-        input,
-        encoding: "utf-8",
-        stdio: "inherit",
-      });
+      spawnSync(
+        "glow",
+        ["-s", "dracula", "-w", process.stdout.columns.toString()],
+        {
+          input,
+          encoding: "utf-8",
+          stdio: "inherit",
+        },
+      );
     }
   : undefined;
 
