@@ -7,6 +7,7 @@ import type { AgentEvent } from "./agent";
 import { modelRef } from "./index";
 import { clearHistory, getHistory } from "./history";
 import glow from "./glow";
+import { write, log, section } from "./output";
 
 let spinnerId: NodeJS.Timeout | undefined;
 const runTimes: number[] = [];
@@ -43,14 +44,14 @@ const hideTimer = () => {
     maxRunTime = elapsed;
   }
   runTimes.push(elapsed);
-  process.stdout.write(ansi.style.reset);
+  process.stdout.write(ansi.style.reset + "\n");
   clearInterval(spinnerId);
 };
 
 let contextUsed = 0;
 
 export async function prompt(): Promise<string | null> {
-  process.stdout.write("\n");
+  write("\n\n");
   let contextLength: number | undefined;
   const ps = await ollama.ps();
   const foundModel = ps.models.find(({ model: m }) => m === modelRef.current);
@@ -88,31 +89,31 @@ export async function prompt(): Promise<string | null> {
       if (command === "/model") {
         const models = (await ollama.list()).models.map((model) => model.name);
         if (args.length === 0) {
-          console.log("Available models:\n");
-          console.log(models.join("\n"));
+          log("Available models:");
+          log(models.join("\n"));
         } else {
           const newModel = args[0] as string;
           if (!models.includes(newModel)) {
-            console.log(`Model not found: ${newModel}`);
+            log(`Model not found: ${newModel}`);
           } else {
-            console.log(`Model set to ${newModel}.`);
+            log(`Model set to ${newModel}.`);
             modelRef.current = newModel;
           }
         }
       } else if (command === "/md") {
         if (!glow) {
-          console.log("'glow' is unavailable, cannot display MarkDown.");
+          log("'glow' is unavailable, cannot display MarkDown.");
           continue;
         }
         const history = getHistory();
         const lastMessage = history[history.length - 1];
         if (!lastMessage) {
-          console.log("Nothing to show.");
+          log("Nothing to show.");
           continue;
         }
         glow(lastMessage.content);
       } else {
-        console.log(`Invalid command: ${command}`);
+        log(`Invalid command: ${command}`);
       }
       continue;
     }
@@ -125,7 +126,7 @@ let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
 export function on(event: AgentEvent) {
   switch (event.type) {
     case "ttft_start":
-      process.stdout.write("\n");
+      write("\n");
       showTimer();
       break;
     case "ttft_end":
@@ -136,30 +137,24 @@ export function on(event: AgentEvent) {
       break;
     case "thinking_chunk":
       if (mode !== "thinking") {
-        process.stdout.write(
-          `\n\n${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `,
-        );
+        section(`${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}`);
         mode = "thinking";
       }
-      process.stdout.write(chalk.gray(event.text));
+      write(chalk.gray(event.text));
       break;
     case "response_chunk":
       if (mode !== "response") {
-        process.stdout.write(
-          `\n\n${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `,
-        );
+        section(`${yellow("model(")}${chalk.gray("response")}${yellow(")")}`);
         mode = "response";
       }
-      process.stdout.write(event.text);
+      write(event.text);
       break;
     case "tool_start":
-      process.stdout.write(
-        `\n\n${green("tool(")}${chalk.gray(event.name)}${green(")")}\n`,
-      );
+      section(`${green("tool(")}${chalk.gray(event.name)}${green(")")}`);
       mode = "tool";
       break;
     case "tool_error":
-      console.log(`${chalk.white.bgRed("ERROR")} ${event.message}`);
+      log(`${chalk.white.bgRed("ERROR")} ${event.message}`);
       break;
     case "done":
       mode = "prompt";
