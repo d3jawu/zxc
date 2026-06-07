@@ -3,6 +3,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
 import glow from "./glow";
+import { log } from "./output";
 
 export const definitions: Tool[] = [
   {
@@ -111,9 +112,9 @@ export const definitions: Tool[] = [
 
 export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
-    console.log(`READ: ${file}`);
+    log(`READ: ${file}`);
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      console.log(
+      log(
         `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
       );
       return `Error: "${file}" does not exist, or is not a file.`;
@@ -125,9 +126,9 @@ export const implementations: Record<string, (args: any) => string> = {
     if (!path) {
       path = process.cwd();
     }
-    console.log(`LIST: ${path}`);
+    log(`LIST: ${path}`);
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      console.log(
+      log(
         `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`,
       );
       return `Error: "${path}" does not exist, or is not a directory.`;
@@ -145,18 +146,19 @@ export const implementations: Record<string, (args: any) => string> = {
   }) => {
     if (glow) {
       const ext = file.split(".").at(-1);
-      console.log(`EDIT: ${file}:\n`);
+      log(`EDIT: ${file}`);
       glow(`${"```"}${ext}\n${target}`);
-      console.log(`INTO:\n`);
+      log(`INTO`);
       glow(`${"```"}${ext}\n${replacement}`);
     } else {
-      console.log(
-        `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
-      );
+      log(`EDIT: ${file}`);
+      log(`...\n${target}\n...`);
+      log(`INTO`);
+      log(`...\n${replacement}\n...`);
     }
 
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      console.log(
+      log(
         `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
       );
       return `Error: File "${file}" does not exist.`;
@@ -164,7 +166,7 @@ export const implementations: Record<string, (args: any) => string> = {
     const content = readFileSync(file, "utf-8");
 
     if (target === replacement) {
-      console.log(
+      log(
         `${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`,
       );
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
@@ -176,10 +178,10 @@ export const implementations: Record<string, (args: any) => string> = {
         match.slice(0, -1),
       );
       if (content.includes(correctedTarget)) {
-        console.log("Whitespace was corrected in target text.");
+        log("Whitespace was corrected in target text.");
         target = correctedTarget;
       } else {
-        console.log(
+        log(
           "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
         );
         const reason = denyReason();
@@ -206,10 +208,11 @@ export const implementations: Record<string, (args: any) => string> = {
   write: ({ file, contents }: { file: string; contents: string }) => {
     if (glow) {
       const ext = file.split(".").at(-1);
-      console.log(`WRITE: ${file}\n`);
+      log(`WRITE: ${file}`);
       glow(`${"```"}${ext}\n${contents}`);
     } else {
-      console.log(`WRITE: ${file}\n${contents}\n`);
+      log(`WRITE: ${file}`);
+      log(contents);
     }
 
     const reason = denyReason();
@@ -221,7 +224,7 @@ export const implementations: Record<string, (args: any) => string> = {
     return "Write succeeded.";
   },
   bash: ({ command }: { command: string }) => {
-    console.log(`RUN: ${command}\n`);
+    log(`RUN: ${command}`);
 
     const reason = denyReason();
     if (reason !== null) {
@@ -238,11 +241,11 @@ export const implementations: Record<string, (args: any) => string> = {
       } else {
         output = proc.stderr.toString();
       }
-      console.log("\n" + chalk.gray(output));
+      log(chalk.gray(output));
       return output;
     } catch (e) {
-      console.log(e);
-      console.log(JSON.stringify(e));
+      log(String(e));
+      log(JSON.stringify(e));
       return `Bash operation failed: ${e}`;
     }
   },
