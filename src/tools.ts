@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
-import highlight from "cli-highlight";
+import glow from "./glow";
 
 export const definitions: Tool[] = [
   {
@@ -113,7 +113,9 @@ export const implementations: Record<string, (args: any) => string> = {
   read: ({ file }: { file: string }) => {
     console.log(`READ: ${file}`);
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      console.log(`${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`);
+      console.log(
+        `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
+      );
       return `Error: "${file}" does not exist, or is not a file.`;
     }
     const contents = readFileSync(file, "utf-8");
@@ -125,7 +127,9 @@ export const implementations: Record<string, (args: any) => string> = {
     }
     console.log(`LIST: ${path}`);
     if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      console.log(`${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`);
+      console.log(
+        `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`,
+      );
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
     return readdirSync(path).join(",");
@@ -139,17 +143,30 @@ export const implementations: Record<string, (args: any) => string> = {
     target: string;
     replacement: string;
   }) => {
-    console.log(
-      `EDIT: ${file}:\n...\n${highlight(target, { ignoreIllegals: true })}\n...\n\nINTO:\n...\n${highlight(replacement, { ignoreIllegals: true })}\n...\n`,
-    );
+    if (glow) {
+      const ext = file.split(".").at(-1);
+      console.log(`EDIT: ${file}:\n`);
+      glow(`${"```"}${ext}\n${target}`);
+      console.log(`INTO:\n`);
+      glow(`${"```"}${ext}\n${replacement}`);
+    } else {
+      console.log(
+        `EDIT: ${file}:\n...\n${target}\n...\n\nINTO:\n...\n${replacement}\n...\n`,
+      );
+    }
+
     if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      console.log(`${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`);
+      console.log(
+        `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
+      );
       return `Error: File "${file}" does not exist.`;
     }
     const content = readFileSync(file, "utf-8");
 
     if (target === replacement) {
-      console.log(`${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`);
+      console.log(
+        `${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`,
+      );
       return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
     }
 
@@ -187,9 +204,13 @@ export const implementations: Record<string, (args: any) => string> = {
     return "Edit succeeded.";
   },
   write: ({ file, contents }: { file: string; contents: string }) => {
-    console.log(
-      `WRITE: ${file}\n${highlight(contents, { ignoreIllegals: true })}\n`,
-    );
+    if (glow) {
+      const ext = file.split(".").at(-1);
+      console.log(`WRITE: ${file}\n`);
+      glow(`${"```"}${ext}\n${contents}`);
+    } else {
+      console.log(`WRITE: ${file}\n${contents}\n`);
+    }
 
     const reason = denyReason();
     if (reason !== null) {
