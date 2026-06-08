@@ -1,7 +1,7 @@
 import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
 import type { Tool } from "ollama";
-import { log } from "./output";
+import { write } from "./output";
 
 export type ToolSet = {
   definitions: Tool[];
@@ -31,7 +31,7 @@ export default async function* run({
   toolset,
   prompt,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
-  log(`Using ${model}.`);
+  write(`Using ${model}.`);
   // const messages: Message[] = [{ role: "system", content: systemPrompt }];
   if (getHistory().length === 0) {
     pushHistory({ role: "system", content: systemPrompt });
