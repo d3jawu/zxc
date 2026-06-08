@@ -1,7 +1,7 @@
 import type { Message } from "ollama";
 import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
-import { log } from "./output";
+import { log, section } from "./output";
 
 const HISTORY_FILE = join(process.cwd(), ".history.json");
 
@@ -15,8 +15,8 @@ if (existsSync(HISTORY_FILE)) {
   log("Resuming interrupted session.");
   const lastMessage = history[history.length - 1];
   log(
-     `Left off at ${lastMessage?.role}: "${lastMessage?.content.slice(0, 80)}..."`,
-   );
+    `Left off at ${lastMessage?.role}: "${lastMessage?.content.slice(0, 80)}..."`,
+  );
 }
 
 export function pushHistory(message: Message): void {
@@ -30,7 +30,7 @@ export function getHistory(): Message[] {
 
 export function clearHistory(): void {
   if (existsSync(HISTORY_FILE)) {
-    log("Ending session.");
+    section("Ending session.");
     rmSync(HISTORY_FILE);
   }
 }
