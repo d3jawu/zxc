@@ -2,8 +2,8 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
-import glow from "./glow";
-import { log } from "./output";
+import glow from "./ui/glow";
+import { log } from "./ui/output";
 
 export const definitions: Tool[] = [
   {

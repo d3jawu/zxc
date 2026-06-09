@@ -1,7 +1,7 @@
 import type { Message } from "ollama";
 import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
-import { log, section } from "./output";
+import { log, section } from "./ui/output";
 
 const HISTORY_FILE = join(process.cwd(), ".history.json");
 

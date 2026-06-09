@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 import run from "./agent";
 import { definitions, implementations } from "./tools";
-import { prompt, trigger } from "./ui";
+import { write } from "./ui/output";
+import { trigger } from "./ui/ui";
+import prompt from "./ui/prompt";
 
 export const modelRef = { current: "qwen3.6:27b-coding-nvfp4" };
 
@@ -26,6 +28,8 @@ Guidelines:
 - Show file paths clearly when working with files
 - Work in the current directory, do not cd into others
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`;
+
+write(`Using model ${modelRef.current}.`);
 
 const agent = run({
   systemPrompt,
