@@ -1,14 +1,16 @@
 # zxc
 
-自行车 is a simple CLI agent intended for local models. It's meant to help you get where you're going faster, but you still have to pedal.
+自行车 (zì xing che) is a simple CLI agent intended for local models. Like a bicycle, it can help you get where you're going faster, but you still have to pedal and steer.
 
-To install dependencies:
+# Usage
+
+Install dependencies:
 
 ```bash
 bun install
 ```
 
-To run:
+Run:
 
 ```bash
 bun run start
