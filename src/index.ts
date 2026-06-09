@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import run from "./agent";
 import { definitions, implementations } from "./tools";
-import { prompt, on } from "./ui";
+import { prompt, trigger } from "./ui";
 
 export const modelRef = { current: "qwen3.6:27b-coding-nvfp4" };
 
@@ -38,5 +38,5 @@ const agent = run({
 });
 
 for await (const event of agent) {
-  on(event);
+  trigger(event);
 }

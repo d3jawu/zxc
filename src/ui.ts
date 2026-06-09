@@ -36,7 +36,7 @@ const showTimer = () => {
     write(
       `${ansi.cursor.back(1000)}${chalk.gray("Model running")} ${color(elapsed.toFixed(2) + "s")}`,
     );
-  }, 75);
+  }, 50);
 };
 
 const hideTimer = () => {
@@ -129,85 +129,162 @@ export async function prompt(): Promise<string | null> {
   }
 }
 
-let mode: "thinking" | "response" | "tool" | "prompt" | undefined;
+const resetQuietBuffer = () => {
+  quietBuffer = "";
+  quietTokenCount = 0;
+};
 
-export function on(event: AgentEvent) {
-  switch (event.type) {
-    case "ttft_start":
-      write("\n");
-      showTimer();
-      break;
-    case "ttft_end":
-      hideTimer();
-      break;
-    case "context_used":
-      contextUsed = event.count;
-      break;
-    case "thinking_chunk": {
-      const prelude = `${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `;
-      if (mode !== "thinking") {
-        section();
-        write(prelude);
-        quietBuffer = "";
-        mode = "thinking";
+type State = "thinking" | "response" | "tool" | "prompt" | "timer";
+
+let state: State;
+
+const onState = (newState: State, payload?: string) => {
+  const oldState = state;
+
+  if (oldState !== newState) {
+    // Leaving state
+    switch (oldState) {
+      case "thinking": {
+        resetQuietBuffer();
+        break;
       }
-
-      if (quietMode) {
-        write(
-          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
-        );
-
-        quietTokenCount += 1;
-        quietBuffer += event.text;
-      } else {
-        write(chalk.gray(event.text));
-      }
-      break;
-    }
-    case "response_chunk": {
-      const prelude = `${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `;
-      if (mode !== "response") {
-        section();
-        write(prelude);
-        quietBuffer = "";
-        mode = "response";
-      }
-
-      if (quietMode) {
-        write(
-          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
-        );
-
-        quietTokenCount += 1;
-        quietBuffer += event.text;
-      } else {
-        write(event.text);
-      }
-      break;
-    }
-    case "tool_start":
-      section();
-      write(`${green("tool(")}${chalk.gray(event.name)}${green(")")}: `);
-      mode = "tool";
-      break;
-    case "tool_error":
-      log(`${chalk.white.bgRed("ERROR")} ${event.message}`);
-      break;
-    case "done":
-      if (quietMode) {
-        if (mode === "response") {
+      case "response": {
+        if (quietMode) {
+          section();
           if (glow) {
-            section();
             glow(quietBuffer);
           } else {
             write(quietBuffer);
           }
         }
-
-        quietBuffer = "";
-        quietTokenCount = 0;
+        resetQuietBuffer();
+        break;
       }
-      mode = "prompt";
+      case "tool": {
+        break;
+      }
+      case "prompt": {
+        break;
+      }
+      case "timer": {
+        hideTimer();
+        break;
+      }
+      case undefined: {
+        break;
+      }
+    }
+
+    // Entering state
+    switch (newState) {
+      case "thinking": {
+        const prelude = `${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `;
+        section();
+        write(prelude);
+        resetQuietBuffer();
+        break;
+      }
+      case "response": {
+        const prelude = `${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `;
+        section();
+        write(prelude);
+        resetQuietBuffer();
+        break;
+      }
+      case "tool": {
+        section();
+        write(`${green("tool(")}${chalk.gray(payload)}${green(")")}: `);
+        break;
+      }
+      case "prompt": {
+        break;
+      }
+      case "timer": {
+        write("\n");
+        showTimer();
+        break;
+      }
+      case undefined: {
+        break;
+      }
+    }
+  }
+
+  // Triggered every time state entered regardless of change
+  switch (newState) {
+    case "thinking": {
+      const prelude = `${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `;
+      if (quietMode) {
+        write(
+          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
+        );
+
+        quietTokenCount += 1;
+        quietBuffer += payload;
+      } else {
+        write(chalk.gray(payload));
+      }
+      break;
+    }
+    case "response": {
+      const prelude = `${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `;
+
+      if (quietMode) {
+        write(
+          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
+        );
+
+        quietTokenCount += 1;
+        quietBuffer += payload;
+      } else {
+        write(payload || "");
+      }
+      break;
+    }
+    case "tool": {
+      break;
+    }
+    case "prompt": {
+      resetQuietBuffer();
+      break;
+    }
+    case "timer": {
+      break;
+    }
+    case undefined: {
+      break;
+    }
+  }
+
+  state = newState;
+};
+
+export function trigger(event: AgentEvent) {
+  switch (event.type) {
+    case "ttft_start":
+      onState("timer");
+      break;
+    case "ttft_end":
+      break;
+    case "context_used":
+      contextUsed = event.count;
+      break;
+    case "thinking_chunk": {
+      onState("thinking", event.text);
+      break;
+    }
+    case "response_chunk": {
+      onState("response", event.text);
+      break;
+    }
+    case "tool_start":
+      onState("tool", event.name);
+      break;
+    case "tool_error":
+      log(`${chalk.white.bgRed("ERROR")} ${event.message}`);
+      break;
+    case "done":
+      onState("prompt");
       break;
   }
 }
