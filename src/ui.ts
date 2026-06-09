@@ -33,8 +33,8 @@ const showTimer = () => {
     } else {
       color = red;
     }
-    process.stdout.write(
-      `${ansi.cursor.back(100)}${chalk.gray("Model running")} ${color(elapsed.toFixed(2) + "s")}`,
+    write(
+      `${ansi.cursor.back(1000)}${chalk.gray("Model running")} ${color(elapsed.toFixed(2) + "s")}`,
     );
   }, 75);
 };
@@ -44,11 +44,15 @@ const hideTimer = () => {
     maxRunTime = elapsed;
   }
   runTimes.push(elapsed);
-  process.stdout.write(ansi.style.reset + "\n");
+  write(ansi.style.reset + "\n");
   clearInterval(spinnerId);
 };
 
 let contextUsed = 0;
+
+let quietMode = true;
+let quietBuffer: string = "";
+let quietTokenCount = 0;
 
 export async function prompt(): Promise<string | null> {
   write("\n\n");
@@ -112,11 +116,15 @@ export async function prompt(): Promise<string | null> {
           continue;
         }
         glow(lastMessage.content);
+      } else if (command === "/quiet") {
+        quietMode = !quietMode;
+        log(`Quiet mode ${quietMode ? "enabled" : "disabled"}.`);
       } else {
         log(`Invalid command: ${command}`);
       }
       continue;
     }
+    write(""); // Tell output it needs a newline
     return line;
   }
 }
@@ -135,28 +143,70 @@ export function on(event: AgentEvent) {
     case "context_used":
       contextUsed = event.count;
       break;
-    case "thinking_chunk":
+    case "thinking_chunk": {
+      const prelude = `${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}: `;
       if (mode !== "thinking") {
-        section(`${yellow("model(")}${chalk.gray("thinking")}${yellow(")")}`);
+        section();
+        write(prelude);
+        quietBuffer = "";
         mode = "thinking";
       }
-      write(chalk.gray(event.text));
+
+      if (quietMode) {
+        write(
+          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
+        );
+
+        quietTokenCount += 1;
+        quietBuffer += event.text;
+      } else {
+        write(chalk.gray(event.text));
+      }
       break;
-    case "response_chunk":
+    }
+    case "response_chunk": {
+      const prelude = `${yellow("model(")}${chalk.gray("response")}${yellow(")")}: `;
       if (mode !== "response") {
-        section(`${yellow("model(")}${chalk.gray("response")}${yellow(")")}`);
+        section();
+        write(prelude);
+        quietBuffer = "";
         mode = "response";
       }
-      write(event.text);
+
+      if (quietMode) {
+        write(
+          `${ansi.cursor.back(1000)}${prelude}${chalk.gray(`${quietTokenCount} tokens`)}`,
+        );
+
+        quietTokenCount += 1;
+        quietBuffer += event.text;
+      } else {
+        write(event.text);
+      }
       break;
+    }
     case "tool_start":
-      section(`${green("tool(")}${chalk.gray(event.name)}${green(")")}`);
+      section();
+      write(`${green("tool(")}${chalk.gray(event.name)}${green(")")}: `);
       mode = "tool";
       break;
     case "tool_error":
       log(`${chalk.white.bgRed("ERROR")} ${event.message}`);
       break;
     case "done":
+      if (quietMode) {
+        if (mode === "response") {
+          if (glow) {
+            section();
+            glow(quietBuffer);
+          } else {
+            write(quietBuffer);
+          }
+        }
+
+        quietBuffer = "";
+        quietTokenCount = 0;
+      }
       mode = "prompt";
       break;
   }

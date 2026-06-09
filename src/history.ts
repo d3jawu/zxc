@@ -30,7 +30,8 @@ export function getHistory(): Message[] {
 
 export function clearHistory(): void {
   if (existsSync(HISTORY_FILE)) {
-    section("Ending session.");
+    section();
+    log("Ending session.");
     rmSync(HISTORY_FILE);
   }
 }
