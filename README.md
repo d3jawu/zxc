@@ -1,4 +1,4 @@
-# zxc
+# zxc 🚲
 
 自行车 (zì xíng chē) is a simple CLI agent intended for local models. Like a bicycle, it can help you get where you're going faster, but you still have to pedal and steer.
 
