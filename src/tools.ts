@@ -133,7 +133,7 @@ export const implementations: Record<string, (args: any) => string> = {
       );
       return `Error: "${path}" does not exist, or is not a directory.`;
     }
-    return readdirSync(path).join(",");
+    return readdirSync(path).join("\n");
   },
   edit: ({
     file,
@@ -174,9 +174,9 @@ export const implementations: Record<string, (args: any) => string> = {
 
     if (!content.includes(target)) {
       // Attempt whitespace correction
-      const correctedTarget = target.replaceAll(/^(  )* (?=\S)/gm, (match) =>
-        match.slice(0, -1),
-      );
+      const correctedTarget = target
+        .trim()
+        .replaceAll(/^(  )* (?=\S)/gm, (match) => match.slice(0, -1));
       if (content.includes(correctedTarget)) {
         log("Whitespace was corrected in target text.");
         target = correctedTarget;
@@ -191,9 +191,6 @@ export const implementations: Record<string, (args: any) => string> = {
         return "Edit succeeded.";
       }
     }
-
-    target = target.trim();
-    replacement = replacement.trim();
 
     const reason = denyReason();
     if (reason !== null) {

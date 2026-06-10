@@ -102,7 +102,6 @@ const onState = (newState: State, payload?: string) => {
     }
     case "response": {
       const prelude = `${colors.yellow("model(")}${colors.gray("response")}${colors.yellow(")")}: `;
-
       if (quiet.enabled) {
         write(
           `${ansi.cursor.back(1000)}${prelude}${colors.gray(`${quiet.count} tokens`)}`,

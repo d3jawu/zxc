@@ -30,7 +30,6 @@ export default async function* run({
   toolset,
   prompt,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
-  // const messages: Message[] = [{ role: "system", content: systemPrompt }];
   if (getHistory().length === 0) {
     pushHistory({ role: "system", content: systemPrompt });
   }
