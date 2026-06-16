@@ -12,8 +12,8 @@ type State = "thinking" | "response" | "tool" | "prompt" | "timer";
 let state: State = "prompt";
 
 type StatePayloads = {
-  thinking: { text: string };
-  response: { text: string };
+  thinking: string;
+  response: string;
   tool: { name: string };
   prompt: undefined;
   timer: undefined;
@@ -38,14 +38,14 @@ const stateHandlers: {
       quiet.reset();
     },
     exit: () => quiet.reset(),
-    tick: (payload) => {
+    tick: (text) => {
       if (quiet.enabled) {
         write(
           `${ansi.cursor.back(1000)}${modelPrelude("thinking")}${colors.gray(`${quiet.count} tokens`)}`,
         );
-        quiet.add(payload.text);
+        quiet.add(text);
       } else {
-        write(colors.gray(payload.text));
+        write(colors.gray(text));
       }
     },
   },
@@ -66,14 +66,14 @@ const stateHandlers: {
       }
       quiet.reset();
     },
-    tick: (payload) => {
+    tick: (text) => {
       if (quiet.enabled) {
         write(
           `${ansi.cursor.back(1000)}${modelPrelude("response")}${colors.gray(`${quiet.count} tokens`)}`,
         );
-        quiet.add(payload.text);
+        quiet.add(text);
       } else {
-        write(payload.text);
+        write(text);
       }
     },
   },
@@ -118,10 +118,10 @@ export function trigger(event: AgentEvent) {
       setContextUsed(event.count);
       break;
     case "thinking_chunk":
-      onState("thinking", { text: event.text });
+      onState("thinking", event.text);
       break;
     case "response_chunk":
-      onState("response", { text: event.text });
+      onState("response", event.text);
       break;
     case "tool_start":
       onState("tool", { name: event.name });
