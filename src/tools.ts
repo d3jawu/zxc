@@ -232,18 +232,21 @@ export const implementations: Record<string, (args: any) => string> = {
       const proc = spawnSync({
         cmd: ["bash", "-c", command],
       });
-      let output = "";
-      if (proc.exitCode === 0) {
-        output = proc.stdout.toString();
-      } else {
-        output = proc.stderr.toString();
+      const output = proc.stdout.toString();
+      const error = proc.stderr.toString();
+      const exitCode = proc.exitCode ?? -1;
+
+      if (exitCode === 0) {
+        log(chalk.gray(output));
+        return output;
       }
-      log(chalk.gray(output));
-      return output;
+
+      log(chalk.gray(error || output));
+      return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
     } catch (e) {
       log(String(e));
       log(JSON.stringify(e));
-      return `Bash operation failed: ${e}`;
+      return `Error: Bash operation failed: ${e}`;
     }
   },
 };
