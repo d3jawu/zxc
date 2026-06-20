@@ -16,4 +16,4 @@ Run:
 bun run start
 ```
 
-To show responses in MarkDown with the `/md` command, you'll need [Glow](github.com/charmbracelet/glow) installed.
+To show responses in MarkDown with the `/md` command, you'll need [Glow](https://github.com/charmbracelet/glow) installed.
