@@ -9,8 +9,14 @@ export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
 export type ToolSet = Record<ToolName, ToolWithImplementation>;
 
-export type ToolWithImplementation = Tool & {
-  run: (args: any) => string;
+export type ReadArgs = { file: string };
+export type ListArgs = { path?: string };
+export type EditArgs = { file: string; target: string; replacement: string };
+export type WriteArgs = { file: string; contents: string };
+export type BashArgs = { command: string };
+
+export type ToolWithImplementation<T = any> = Tool & {
+  run: (args: T) => string | Promise<string>;
 };
 
 // Reusable function to get confirmation or denial reason
@@ -37,15 +43,15 @@ export const tools: ToolSet = {
         },
       },
     },
-    run: (args: any) => {
-      log(`READ: ${args.file}`);
-      if (!statSync(args.file, { throwIfNoEntry: false })?.isFile()) {
+    run: ({ file }: ReadArgs) => {
+      log(`READ: ${file}`);
+      if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
         log(
-          `${chalk.white.bgRed("ERROR")} ${args.file} does not exist, or is not a file.`,
+          `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
         );
-        return `Error: "${args.file}" does not exist, or is not a file.`;
+        return `Error: "${file}" does not exist, or is not a file.`;
       }
-      const contents = readFileSync(args.file, "utf-8");
+      const contents = readFileSync(file, "utf-8");
       return contents;
     },
   },
@@ -65,16 +71,16 @@ export const tools: ToolSet = {
         },
       },
     },
-    run: (args: any) => {
-      const path = args.path ?? process.cwd();
-      log(`LIST: ${path}`);
-      if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
+    run: ({ path }: ListArgs) => {
+      const resolvedPath = path ?? process.cwd();
+      log(`LIST: ${resolvedPath}`);
+      if (!statSync(resolvedPath, { throwIfNoEntry: false })?.isDirectory()) {
         log(
-          `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`,
+          `${chalk.white.bgRed("ERROR")} ${resolvedPath} does not exist, or is not a directory.`,
         );
-        return `Error: "${path}" does not exist, or is not a directory.`;
+        return `Error: "${resolvedPath}" does not exist, or is not a directory.`;
       }
-      return readdirSync(path).join("\n");
+      return readdirSync(resolvedPath).join("\n");
     },
   },
   edit: {
@@ -103,9 +109,7 @@ export const tools: ToolSet = {
         },
       },
     },
-    run: (args: any) => {
-      const { file, target: targetText, replacement } = args;
-
+    run: ({ file, target: targetText, replacement }: EditArgs) => {
       if (glow) {
         const ext = file.split(".").at(-1);
         log(`EDIT: ${file}`);
@@ -187,14 +191,14 @@ export const tools: ToolSet = {
         },
       },
     },
-    run: (args: any) => {
+    run: ({ file, contents }: WriteArgs) => {
       if (glow) {
-        const ext = args.file.split(".").at(-1);
-        log(`WRITE: ${args.file}`);
-        glow(`${"```"}${ext}\n${args.contents}`);
+        const ext = file.split(".").at(-1);
+        log(`WRITE: ${file}`);
+        glow(`${"```"}${ext}\n${contents}`);
       } else {
-        log(`WRITE: ${args.file}`);
-        log(args.contents);
+        log(`WRITE: ${file}`);
+        log(contents);
       }
 
       const reason = denyReason();
@@ -202,7 +206,7 @@ export const tools: ToolSet = {
         return `Error: Write operation denied by user because: ${reason}`;
       }
 
-      writeFileSync(args.file, args.contents, { encoding: "utf-8" });
+      writeFileSync(file, contents, { encoding: "utf-8" });
       return "Write succeeded.";
     },
   },
@@ -223,8 +227,8 @@ export const tools: ToolSet = {
         },
       },
     },
-    run: (args: any) => {
-      log(`RUN: ${args.command}`);
+    run: ({ command }: BashArgs) => {
+      log(`RUN: ${command}`);
 
       const reason = denyReason();
       if (reason !== null) {
@@ -233,7 +237,7 @@ export const tools: ToolSet = {
 
       try {
         const proc = spawnSync({
-          cmd: ["bash", "-c", args.command],
+          cmd: ["bash", "-c", command],
         });
         const output = proc.stdout.toString();
         const error = proc.stderr.toString();
