@@ -129,7 +129,7 @@ export const tools: ToolSet = {
         );
         return `Error: File "${file}" does not exist.`;
       }
-      const content = readFileSync(file, "utf-8");
+      const originalContent = readFileSync(file, "utf-8");
 
       if (targetText === replacement) {
         log(
@@ -139,12 +139,14 @@ export const tools: ToolSet = {
       }
 
       let target = targetText;
-      if (!content.includes(target)) {
+      if (!originalContent.includes(target)) {
         // Attempt whitespace correction
         const correctedTarget = target
           .trim()
-          .replaceAll(/^(  )* (?=\S)/gm, (match: string) => match.slice(0, -1));
-        if (content.includes(correctedTarget)) {
+          .replaceAll(/^(   )* (?=\S)/gm, (match: string) =>
+            match.slice(0, -1),
+          );
+        if (originalContent.includes(correctedTarget)) {
           log("Whitespace was corrected in target text.");
           target = correctedTarget;
         } else {
@@ -159,14 +161,19 @@ export const tools: ToolSet = {
         }
       }
 
+      // Write the edit first
+      writeFileSync(file, originalContent.replace(target, replacement), {
+        encoding: "utf-8",
+      });
+
+      // Then ask for confirmation
       const reason = denyReason();
       if (reason !== null) {
+        // Revert to original state
+        writeFileSync(file, originalContent, { encoding: "utf-8" });
         return `Error: Edit operation denied by user because: ${reason}`;
       }
 
-      writeFileSync(file, content.replace(target, replacement), {
-        encoding: "utf-8",
-      });
       return "Edit succeeded.";
     },
   },
@@ -201,12 +208,29 @@ export const tools: ToolSet = {
         log(contents);
       }
 
+      // Save original content if file exists
+      const originalContent = statSync(file, {
+        throwIfNoEntry: false,
+      })?.isFile()
+        ? readFileSync(file, "utf-8")
+        : null;
+
+      // Write the content first
+      writeFileSync(file, contents, { encoding: "utf-8" });
+
+      // Then ask for confirmation
       const reason = denyReason();
       if (reason !== null) {
+        // Revert to original state
+        if (originalContent !== null) {
+          writeFileSync(file, originalContent, { encoding: "utf-8" });
+        } else {
+          // File didn't exist before, so delete it
+          require("fs").unlinkSync(file);
+        }
         return `Error: Write operation denied by user because: ${reason}`;
       }
 
-      writeFileSync(file, contents, { encoding: "utf-8" });
       return "Write succeeded.";
     },
   },
