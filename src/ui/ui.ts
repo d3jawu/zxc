@@ -126,7 +126,7 @@ export function trigger(event: AgentEvent) {
     case "tool_start":
       onState("tool", { name: event.name });
       break;
-    case "tool_error":
+    case "error":
       log(`ERROR: ${event.message}`);
       break;
     case "done":

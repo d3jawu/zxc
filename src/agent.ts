@@ -8,8 +8,8 @@ export type AgentEvent =
   | { type: "context_used"; count: number }
   | { type: "thinking_chunk"; text: string }
   | { type: "tool_start"; name: string }
-  | { type: "tool_error"; message: string }
   | { type: "response_chunk"; text: string }
+  | { type: "error"; message: string }
   | { type: "done" };
 
 type AgentOptions = {
@@ -41,17 +41,25 @@ export default async function* run({
     }
 
     yield { type: "ttft_start" };
-    const response = await ollama.chat({
-      model,
-      stream: true,
-      messages: getHistory(),
-      tools: Object.values(toolset).map((t) => ({
-        type: t.type,
-        function: t.function,
-      })),
-      think: true,
-      keep_alive: "20m",
-    });
+    let response;
+    while (true) {
+      try {
+        response = await ollama.chat({
+          model,
+          stream: true,
+          messages: getHistory(),
+          tools: Object.values(toolset).map((t) => ({
+            type: t.type,
+            function: t.function,
+          })),
+          think: true,
+          keep_alive: "20m",
+        });
+        break;
+      } catch (e) {
+        yield { type: "error", message: `Ollama failed, retrying.\n${e}` };
+      }
+    }
     yield { type: "ttft_end" };
 
     let fullResponse = "";
@@ -73,7 +81,7 @@ export default async function* run({
           const toolDef = toolset[toolCall.function.name as ToolName];
           if (!toolDef) {
             yield {
-              type: "tool_error",
+              type: "error",
               message: `Attempted to call invalid tool: ${toolCall.function.name}`,
             };
             pushHistory({
