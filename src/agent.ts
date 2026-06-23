@@ -1,11 +1,6 @@
 import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
-import type { Tool } from "ollama";
-
-export type ToolSet = {
-  definitions: Tool[];
-  implementations: Record<string, (args: any) => Promise<string> | string>;
-};
+import type { ToolName, ToolSet } from "./tools";
 
 export type AgentEvent =
   | { type: "ttft_start" }
@@ -50,7 +45,10 @@ export default async function* run({
       model,
       stream: true,
       messages: getHistory(),
-      tools: toolset.definitions,
+      tools: Object.values(toolset).map((t) => ({
+        type: t.type,
+        function: t.function,
+      })),
       think: true,
       keep_alive: "20m",
     });
@@ -72,8 +70,8 @@ export default async function* run({
         pushHistory(part.message);
         for (const toolCall of part.message.tool_calls) {
           yield { type: "tool_start", name: toolCall.function.name };
-          const toolFn = toolset.implementations[toolCall.function.name];
-          if (!toolFn) {
+          const toolDef = toolset[toolCall.function.name as ToolName];
+          if (!toolDef) {
             yield {
               type: "tool_error",
               message: `Attempted to call invalid tool: ${toolCall.function.name}`,
@@ -85,7 +83,7 @@ export default async function* run({
             });
             continue;
           }
-          const toolResponse = await toolFn(toolCall.function.arguments);
+          const toolResponse = await toolDef.run(toolCall.function.arguments);
           pushHistory({
             role: "tool",
             tool_name: toolCall.function.name,

@@ -5,8 +5,22 @@ import chalk from "chalk";
 import glow from "./ui/glow";
 import { log } from "./ui/output";
 
-export const definitions: Tool[] = [
-  {
+export type ToolName = "read" | "list" | "edit" | "write" | "bash";
+
+export type ToolSet = Record<ToolName, ToolWithImplementation>;
+
+export type ToolWithImplementation = Tool & {
+  run: (args: any) => string;
+};
+
+// Reusable function to get confirmation or denial reason
+function denyReason(): string | null {
+  const input = prompt("Confirm (↵) or deny (give reason):");
+  return input?.trim() || null;
+}
+
+export const tools: ToolSet = {
+  read: {
     type: "function",
     function: {
       name: "read",
@@ -23,8 +37,19 @@ export const definitions: Tool[] = [
         },
       },
     },
+    run: (args: any) => {
+      log(`READ: ${args.file}`);
+      if (!statSync(args.file, { throwIfNoEntry: false })?.isFile()) {
+        log(
+          `${chalk.white.bgRed("ERROR")} ${args.file} does not exist, or is not a file.`,
+        );
+        return `Error: "${args.file}" does not exist, or is not a file.`;
+      }
+      const contents = readFileSync(args.file, "utf-8");
+      return contents;
+    },
   },
-  {
+  list: {
     type: "function",
     function: {
       name: "list",
@@ -40,8 +65,19 @@ export const definitions: Tool[] = [
         },
       },
     },
+    run: (args: any) => {
+      const path = args.path ?? process.cwd();
+      log(`LIST: ${path}`);
+      if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
+        log(
+          `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`,
+        );
+        return `Error: "${path}" does not exist, or is not a directory.`;
+      }
+      return readdirSync(path).join("\n");
+    },
   },
-  {
+  edit: {
     type: "function",
     function: {
       name: "edit",
@@ -67,8 +103,70 @@ export const definitions: Tool[] = [
         },
       },
     },
+    run: (args: any) => {
+      const { file, target: targetText, replacement } = args;
+
+      if (glow) {
+        const ext = file.split(".").at(-1);
+        log(`EDIT: ${file}`);
+        glow(`${"```"}${ext}\n${targetText}`);
+        log(`INTO`);
+        glow(`${"```"}${ext}\n${replacement}`);
+      } else {
+        log(`EDIT: ${file}`);
+        log(`...\n${targetText}\n...`);
+        log(`INTO`);
+        log(`...\n${replacement}\n...`);
+      }
+
+      if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
+        log(
+          `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
+        );
+        return `Error: File "${file}" does not exist.`;
+      }
+      const content = readFileSync(file, "utf-8");
+
+      if (targetText === replacement) {
+        log(
+          `${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`,
+        );
+        return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
+      }
+
+      let target = targetText;
+      if (!content.includes(target)) {
+        // Attempt whitespace correction
+        const correctedTarget = target
+          .trim()
+          .replaceAll(/^(  )* (?=\S)/gm, (match: string) => match.slice(0, -1));
+        if (content.includes(correctedTarget)) {
+          log("Whitespace was corrected in target text.");
+          target = correctedTarget;
+        } else {
+          log(
+            "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
+          );
+          const reason = denyReason();
+          if (reason !== null) {
+            return `Error: Edit operation denied by user because: ${reason}`;
+          }
+          return "Edit succeeded.";
+        }
+      }
+
+      const reason = denyReason();
+      if (reason !== null) {
+        return `Error: Edit operation denied by user because: ${reason}`;
+      }
+
+      writeFileSync(file, content.replace(target, replacement), {
+        encoding: "utf-8",
+      });
+      return "Edit succeeded.";
+    },
   },
-  {
+  write: {
     type: "function",
     function: {
       name: "write",
@@ -89,8 +187,26 @@ export const definitions: Tool[] = [
         },
       },
     },
+    run: (args: any) => {
+      if (glow) {
+        const ext = args.file.split(".").at(-1);
+        log(`WRITE: ${args.file}`);
+        glow(`${"```"}${ext}\n${args.contents}`);
+      } else {
+        log(`WRITE: ${args.file}`);
+        log(args.contents);
+      }
+
+      const reason = denyReason();
+      if (reason !== null) {
+        return `Error: Write operation denied by user because: ${reason}`;
+      }
+
+      writeFileSync(args.file, args.contents, { encoding: "utf-8" });
+      return "Write succeeded.";
+    },
   },
-  {
+  bash: {
     type: "function",
     function: {
       name: "bash",
@@ -107,152 +223,34 @@ export const definitions: Tool[] = [
         },
       },
     },
-  },
-];
+    run: (args: any) => {
+      log(`RUN: ${args.command}`);
 
-export const implementations: Record<string, (args: any) => string> = {
-  read: ({ file }: { file: string }) => {
-    log(`READ: ${file}`);
-    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      log(
-        `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
-      );
-      return `Error: "${file}" does not exist, or is not a file.`;
-    }
-    const contents = readFileSync(file, "utf-8");
-    return contents;
-  },
-  list: ({ path }: { path?: string }) => {
-    if (!path) {
-      path = process.cwd();
-    }
-    log(`LIST: ${path}`);
-    if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      log(
-        `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a directory.`,
-      );
-      return `Error: "${path}" does not exist, or is not a directory.`;
-    }
-    return readdirSync(path).join("\n");
-  },
-  edit: ({
-    file,
-    target,
-    replacement,
-  }: {
-    file: string;
-    target: string;
-    replacement: string;
-  }) => {
-    if (glow) {
-      const ext = file.split(".").at(-1);
-      log(`EDIT: ${file}`);
-      glow(`${"```"}${ext}\n${target}`);
-      log(`INTO`);
-      glow(`${"```"}${ext}\n${replacement}`);
-    } else {
-      log(`EDIT: ${file}`);
-      log(`...\n${target}\n...`);
-      log(`INTO`);
-      log(`...\n${replacement}\n...`);
-    }
+      const reason = denyReason();
+      if (reason !== null) {
+        return `Error: Bash operation denied by user because: ${reason}`;
+      }
 
-    if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-      log(
-        `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
-      );
-      return `Error: File "${file}" does not exist.`;
-    }
-    const content = readFileSync(file, "utf-8");
+      try {
+        const proc = spawnSync({
+          cmd: ["bash", "-c", args.command],
+        });
+        const output = proc.stdout.toString();
+        const error = proc.stderr.toString();
+        const exitCode = proc.exitCode ?? -1;
 
-    if (target === replacement) {
-      log(
-        `${chalk.white.bgRed("ERROR")} Replacement text is the same as target text.`,
-      );
-      return `Error: replacement text is unchanged from the target text. This edit will accomplish nothing.`;
-    }
-
-    if (!content.includes(target)) {
-      // Attempt whitespace correction
-      const correctedTarget = target
-        .trim()
-        .replaceAll(/^(  )* (?=\S)/gm, (match) => match.slice(0, -1));
-      if (content.includes(correctedTarget)) {
-        log("Whitespace was corrected in target text.");
-        target = correctedTarget;
-      } else {
-        log(
-          "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
-        );
-        const reason = denyReason();
-        if (reason !== null) {
-          return `Error: Edit operation denied by user because: ${reason}`;
+        if (exitCode === 0) {
+          log(chalk.gray(output));
+          return output;
         }
-        return "Edit succeeded.";
+
+        log(chalk.gray(error || output));
+        return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
+      } catch (e) {
+        log(String(e));
+        log(JSON.stringify(e));
+        return `Error: Bash operation failed: ${e}`;
       }
-    }
-
-    const reason = denyReason();
-    if (reason !== null) {
-      return `Error: Edit operation denied by user because: ${reason}`;
-    }
-
-    writeFileSync(file, content.replace(target, replacement), {
-      encoding: "utf-8",
-    });
-    return "Edit succeeded.";
-  },
-  write: ({ file, contents }: { file: string; contents: string }) => {
-    if (glow) {
-      const ext = file.split(".").at(-1);
-      log(`WRITE: ${file}`);
-      glow(`${"```"}${ext}\n${contents}`);
-    } else {
-      log(`WRITE: ${file}`);
-      log(contents);
-    }
-
-    const reason = denyReason();
-    if (reason !== null) {
-      return `Error: Write operation denied by user because: ${reason}`;
-    }
-
-    writeFileSync(file, contents, { encoding: "utf-8" });
-    return "Write succeeded.";
-  },
-  bash: ({ command }: { command: string }) => {
-    log(`RUN: ${command}`);
-
-    const reason = denyReason();
-    if (reason !== null) {
-      return `Error: Bash operation denied by user because: ${reason}`;
-    }
-
-    try {
-      const proc = spawnSync({
-        cmd: ["bash", "-c", command],
-      });
-      const output = proc.stdout.toString();
-      const error = proc.stderr.toString();
-      const exitCode = proc.exitCode ?? -1;
-
-      if (exitCode === 0) {
-        log(chalk.gray(output));
-        return output;
-      }
-
-      log(chalk.gray(error || output));
-      return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
-    } catch (e) {
-      log(String(e));
-      log(JSON.stringify(e));
-      return `Error: Bash operation failed: ${e}`;
-    }
+    },
   },
 };
-
-// Reusable function to get confirmation or denial reason
-function denyReason(): string | null {
-  const input = prompt("Confirm (↵) or deny (give reason):");
-  return input?.trim() || null;
-}

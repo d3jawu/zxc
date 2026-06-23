@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import run from "./agent";
-import { definitions, implementations } from "./tools";
+import { tools } from "./tools";
 import { write } from "./ui/output";
 import { trigger } from "./ui/ui";
 import prompt from "./ui/prompt";
@@ -34,10 +34,7 @@ write(`Using model ${modelRef.current}.`);
 const agent = run({
   systemPrompt,
   model: modelRef.current,
-  toolset: {
-    definitions,
-    implementations,
-  },
+  toolset: tools,
   prompt,
 });
 
