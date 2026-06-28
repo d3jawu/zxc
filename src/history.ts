@@ -24,9 +24,7 @@ export function pushHistory(message: Message): void {
   writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), "utf-8");
 }
 
-export function getHistory(): Message[] {
-  return history;
-}
+export const getHistory = () => history;
 
 export function clearHistory(): void {
   if (existsSync(HISTORY_FILE)) {

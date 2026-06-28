@@ -8,18 +8,11 @@ if (!glowAvailable) {
   );
 }
 
-const glow = glowAvailable
-  ? (input: string) => {
-      spawnSync(
-        "glow",
-        ["-s", "dracula", "-w", process.stdout.columns.toString()],
-        {
-          input,
-          encoding: "utf-8",
-          stdio: "inherit",
-        },
-      );
-    }
-  : undefined;
-
-export default glow;
+export default glowAvailable &&
+  ((input: string) => {
+    spawnSync(
+      "glow",
+      ["-s", "dracula", "-w", process.stdout.columns.toString()],
+      { input, encoding: "utf-8", stdio: "inherit" },
+    );
+  });

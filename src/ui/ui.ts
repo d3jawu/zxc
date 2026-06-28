@@ -99,7 +99,7 @@ const stateHandlers: {
 
 const onState = <S extends State>(newState: S, payload: StatePayloads[S]) => {
   const oldState = state;
-  const handler = stateHandlers[newState] as StateHandler<S>;
+  const handler = stateHandlers[newState];
 
   if (oldState !== newState) {
     stateHandlers[oldState].exit?.();

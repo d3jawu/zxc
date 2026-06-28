@@ -1,4 +1,10 @@
-import { readFileSync, readdirSync, statSync, writeFileSync } from "fs";
+import {
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+  unlinkSync,
+} from "fs";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
@@ -210,7 +216,7 @@ export const tools: ToolSet = {
         if (originalContent !== null) {
           writeFileSync(file, originalContent, { encoding: "utf-8" });
         } else {
-          require("fs").unlinkSync(file);
+          unlinkSync(file);
         }
         return `Error: Write operation denied by user because: ${reason}`;
       }
