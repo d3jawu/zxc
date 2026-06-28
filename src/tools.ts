@@ -25,11 +25,21 @@ export type ToolWithImplementation<T = any> = Tool & {
   run: (args: T) => string | Promise<string>;
 };
 
-// Reusable function to get confirmation or denial reason
 function denyReason(): string | null {
   const input = prompt("Confirm (↵) or deny (give reason):");
   return input?.trim() || null;
 }
+
+const requirePath = (path: string, type: "file" | "directory") => {
+  const stat = statSync(path, { throwIfNoEntry: false });
+  const check = type === "file" ? stat?.isFile() : stat?.isDirectory();
+  if (!check) {
+    log(
+      `${chalk.white.bgRed("ERROR")} ${path} does not exist, or is not a ${type}.`,
+    );
+    return `Error: "${path}" does not exist, or is not a ${type}.`;
+  }
+};
 
 export const tools: ToolSet = {
   read: {
@@ -51,14 +61,9 @@ export const tools: ToolSet = {
     },
     run: ({ file }: ReadArgs) => {
       log(`READ: ${file}`);
-      if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-        log(
-          `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
-        );
-        return `Error: "${file}" does not exist, or is not a file.`;
-      }
-      const contents = readFileSync(file, "utf-8");
-      return contents;
+      const err = requirePath(file, "file");
+      if (err) return err;
+      return readFileSync(file, "utf-8");
     },
   },
   list: {
@@ -80,12 +85,8 @@ export const tools: ToolSet = {
     run: ({ path }: ListArgs) => {
       const resolvedPath = path ?? process.cwd();
       log(`LIST: ${resolvedPath}`);
-      if (!statSync(resolvedPath, { throwIfNoEntry: false })?.isDirectory()) {
-        log(
-          `${chalk.white.bgRed("ERROR")} ${resolvedPath} does not exist, or is not a directory.`,
-        );
-        return `Error: "${resolvedPath}" does not exist, or is not a directory.`;
-      }
+      const err = requirePath(resolvedPath, "directory");
+      if (err) return err;
       return readdirSync(resolvedPath).join("\n");
     },
   },
@@ -117,13 +118,9 @@ export const tools: ToolSet = {
     },
     run: ({ file, target: targetText, replacement }: EditArgs) => {
       log(`EDIT: ${file}`);
+      const err = requirePath(file, "file");
+      if (err) return err;
 
-      if (!statSync(file, { throwIfNoEntry: false })?.isFile()) {
-        log(
-          `${chalk.white.bgRed("ERROR")} ${file} does not exist, or is not a file.`,
-        );
-        return `Error: File "${file}" does not exist.`;
-      }
       const originalContent = readFileSync(file, "utf-8");
 
       if (targetText === replacement) {
