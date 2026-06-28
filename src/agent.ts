@@ -30,15 +30,17 @@ export default async function* run({
   }
   // Whether to loop again for a tool call.
   let tool = false;
+  let gotResponse = true;
 
   while (true) {
-    if (!tool) {
+    if (!tool && gotResponse) {
       let line: string | null = null;
       while (!line) {
         line = await prompt();
       }
       pushHistory({ role: "user", content: line });
     }
+    gotResponse = false;
 
     yield { type: "ttft_start" };
     let response;
@@ -69,7 +71,6 @@ export default async function* run({
       }
       if (part.done) continue;
 
-      fullResponse += part.message.content;
       tool = false;
       if (part.message.thinking) {
         yield { type: "thinking_chunk", text: part.message.thinking };
@@ -99,6 +100,7 @@ export default async function* run({
           });
         }
       } else if (part.message.content) {
+        fullResponse += part.message.content;
         yield { type: "response_chunk", text: part.message.content };
       }
     }
@@ -106,6 +108,7 @@ export default async function* run({
 
     if (fullResponse) {
       pushHistory({ role: "assistant", content: fullResponse });
+      gotResponse = true;
     }
   }
 }
