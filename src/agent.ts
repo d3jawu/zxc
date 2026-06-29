@@ -10,7 +10,7 @@ export type AgentEvent =
   | { type: "tool_start"; name: string }
   | { type: "response_chunk"; text: string }
   | { type: "error"; message: string }
-  | { type: "done" };
+  | { type: "done"; text: string };
 
 type AgentOptions = {
   systemPrompt: string;
@@ -104,7 +104,7 @@ export default async function* run({
         yield { type: "response_chunk", text: part.message.content };
       }
     }
-    yield { type: "done" };
+    yield { type: "done", text: fullResponse };
 
     if (fullResponse) {
       pushHistory({ role: "assistant", content: fullResponse });

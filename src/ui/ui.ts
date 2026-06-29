@@ -15,7 +15,7 @@ type StatePayloads = {
   thinking: string;
   response: string;
   tool: { name: string };
-  prompt: undefined;
+  prompt: string | undefined;
   timer: undefined;
 };
 
@@ -51,11 +51,7 @@ const stateHandlers: {
       write(modelPrelude("response"));
       quiet.reset();
     },
-    exit: () => {
-      section();
-      glow(quiet.buffer);
-      quiet.reset();
-    },
+    exit: () => quiet.reset(),
     tick: (text) => {
       write(
         `${ansi.cursor.back(1000)}${modelPrelude("response")}${colors.gray(`${quiet.count} tokens`)}`,
@@ -72,6 +68,13 @@ const stateHandlers: {
     },
   },
   prompt: {
+    enter: (text) => {
+      if (text) {
+        section();
+        glow(text);
+      }
+      quiet.reset();
+    },
     tick: () => quiet.reset(),
   },
   timer: {
@@ -117,7 +120,7 @@ export function trigger(event: AgentEvent) {
       log(`ERROR: ${event.message}`);
       break;
     case "done":
-      onState("prompt", undefined);
+      onState("prompt", event.text);
       break;
   }
 }
