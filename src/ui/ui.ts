@@ -53,11 +53,7 @@ const stateHandlers: {
     },
     exit: () => {
       section();
-      if (glow) {
-        glow(quiet.buffer);
-      } else {
-        write(quiet.buffer);
-      }
+      glow(quiet.buffer);
       quiet.reset();
     },
     tick: (text) => {

@@ -63,10 +63,6 @@ export default async function prompt(): Promise<string | null> {
           }
         }
       } else if (command === "/md") {
-        if (!glow) {
-          log("'glow' is unavailable, cannot display MarkDown.");
-          continue;
-        }
         const history = getHistory();
         const lastMessage = history[history.length - 1];
         if (!lastMessage) {

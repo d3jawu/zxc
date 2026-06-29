@@ -142,18 +142,11 @@ export const tools: ToolSet = {
           log("Whitespace was corrected in target text.");
           target = correctedTarget;
         } else {
-          if (glow) {
-            const ext = file.split(".").at(-1);
-            log(`FROM`);
-            glow(`${"```"}${ext}\n${targetText}`);
-            log(`INTO`);
-            glow(`${"```"}${ext}\n${replacement}`);
-          } else {
-            log(`FROM`);
-            log(`...\n${targetText}\n...`);
-            log(`INTO`);
-            log(`...\n${replacement}\n...`);
-          }
+          const ext = file.split(".").at(-1);
+          log(`FROM`);
+          glow(`${"```"}${ext}\n${targetText}`);
+          log(`INTO`);
+          glow(`${"```"}${ext}\n${replacement}`);
           log(
             "Failed to match target text. Perform edit by hand then hit enter, or deny with reason:",
           );

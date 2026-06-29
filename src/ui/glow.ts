@@ -1,18 +1,17 @@
 import { spawnSync } from "child_process";
 
-const glowAvailable =
-  spawnSync("glow", ["--version"], { encoding: "utf-8" }).status === 0;
-if (!glowAvailable) {
+// Check glow availability once on startup and exit if missing
+if (spawnSync("glow", ["--version"], { encoding: "utf-8" }).status !== 0) {
   console.error(
-    "Warning: 'glow' is not installed. Rich previews will be unavailable.",
+    "Error: 'glow' is required. Install it here: https://github.com/charmbracelet/glow",
   );
+  process.exit(1);
 }
 
-export default glowAvailable &&
-  ((input: string) => {
-    spawnSync(
-      "glow",
-      ["-s", "dracula", "-w", process.stdout.columns.toString()],
-      { input, encoding: "utf-8", stdio: "inherit" },
-    );
-  });
+export default (input: string) => {
+  spawnSync(
+    "glow",
+    ["-s", "dracula", "-w", process.stdout.columns.toString()],
+    { input, encoding: "utf-8", stdio: "inherit" },
+  );
+};
