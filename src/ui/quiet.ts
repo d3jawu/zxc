@@ -2,7 +2,6 @@ let quietBuffer: string = "";
 let quietTokenCount = 0;
 
 export default {
-  enabled: true,
   get count(): number {
     return quietTokenCount;
   },

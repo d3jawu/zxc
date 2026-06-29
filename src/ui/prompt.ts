@@ -6,8 +6,6 @@ import { clearHistory, getHistory } from "../history";
 import { write, log } from "./output";
 import glow from "./glow";
 import colors from "./colors";
-import quiet from "./quiet";
-
 let contextUsed = 0;
 
 export const setContextUsed = (val: number) => {
@@ -76,9 +74,6 @@ export default async function prompt(): Promise<string | null> {
           continue;
         }
         glow(lastMessage.content);
-      } else if (command === "/quiet") {
-        quiet.enabled = !quiet.enabled;
-        log(`Quiet mode ${quiet.enabled ? "enabled" : "disabled"}.`);
       } else {
         log(`Invalid command: ${command}`);
       }

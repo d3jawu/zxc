@@ -39,14 +39,10 @@ const stateHandlers: {
     },
     exit: () => quiet.reset(),
     tick: (text) => {
-      if (quiet.enabled) {
-        write(
-          `${ansi.cursor.back(1000)}${modelPrelude("thinking")}${colors.gray(`${quiet.count} tokens`)}`,
-        );
-        quiet.add(text);
-      } else {
-        write(colors.gray(text));
-      }
+      write(
+        `${ansi.cursor.back(1000)}${modelPrelude("thinking")}${colors.gray(`${quiet.count} tokens`)}`,
+      );
+      quiet.add(text);
     },
   },
   response: {
@@ -56,25 +52,19 @@ const stateHandlers: {
       quiet.reset();
     },
     exit: () => {
-      if (quiet.enabled) {
-        section();
-        if (glow) {
-          glow(quiet.buffer);
-        } else {
-          write(quiet.buffer);
-        }
+      section();
+      if (glow) {
+        glow(quiet.buffer);
+      } else {
+        write(quiet.buffer);
       }
       quiet.reset();
     },
     tick: (text) => {
-      if (quiet.enabled) {
-        write(
-          `${ansi.cursor.back(1000)}${modelPrelude("response")}${colors.gray(`${quiet.count} tokens`)}`,
-        );
-        quiet.add(text);
-      } else {
-        write(text);
-      }
+      write(
+        `${ansi.cursor.back(1000)}${modelPrelude("response")}${colors.gray(`${quiet.count} tokens`)}`,
+      );
+      quiet.add(text);
     },
   },
   tool: {
