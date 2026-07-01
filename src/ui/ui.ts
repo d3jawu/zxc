@@ -4,19 +4,17 @@ import glow from "./glow";
 import { write, log, section } from "./output";
 import colors from "./colors";
 import { setContextUsed } from "./prompt";
-import quiet from "./quiet";
-import { showTimer, hideTimer } from "./timer";
+import summary from "./summary";
 
-type State = "thinking" | "response" | "tool" | "prompt" | "timer";
+type State = "prompt" | "progress" | "tool" | "response";
 
 let state: State = "prompt";
 
 type StatePayloads = {
-  thinking: string;
+  prompt: undefined;
+  progress: "read" | "list" | "token" | undefined;
+  tool: string;
   response: string;
-  tool: { name: string };
-  prompt: string | undefined;
-  timer: undefined;
 };
 
 type StateHandler<S extends State> = {
@@ -31,58 +29,37 @@ const modelPrelude = (label: State) =>
 const stateHandlers: {
   [K in State]: StateHandler<K>;
 } = {
-  thinking: {
+  prompt: {},
+  progress: {
     enter: () => {
-      section();
-      write(modelPrelude("thinking"));
-      quiet.reset();
+      summary.start();
     },
-    exit: () => quiet.reset(),
-    tick: (text) => {
-      write(
-        `${ansi.cursor.back(1000)}${modelPrelude("thinking")}${colors.gray(`${quiet.count} tokens`)}`,
-      );
-      quiet.add(text);
+    tick: (type) => {
+      if (type) {
+        summary.add(type);
+      }
     },
-  },
-  response: {
-    enter: () => {
-      section();
-      write(modelPrelude("response"));
-      quiet.reset();
-    },
-    exit: () => quiet.reset(),
-    tick: (text) => {
-      write(
-        `${ansi.cursor.back(1000)}${modelPrelude("response")}${colors.gray(`${quiet.count} tokens`)}`,
-      );
-      quiet.add(text);
+    exit: () => {
+      summary.end();
     },
   },
   tool: {
-    enter: (payload) => {
+    tick: (payload) => {
       section();
       write(
-        `${colors.green("tool(")}${colors.gray(payload.name)}${colors.green(")")}: `,
+        `${colors.green("tool(")}${colors.gray(payload)}${colors.green(")")}: `,
       );
     },
   },
-  prompt: {
+  response: {
     enter: (text) => {
+      section();
+      write(modelPrelude("response"));
       if (text) {
         section();
         glow(text);
       }
-      quiet.reset();
     },
-    tick: () => quiet.reset(),
-  },
-  timer: {
-    enter: () => {
-      write("\n");
-      showTimer();
-    },
-    exit: () => hideTimer(),
   },
 };
 
@@ -101,26 +78,37 @@ const onState = <S extends State>(newState: S, payload: StatePayloads[S]) => {
 
 export function trigger(event: AgentEvent) {
   switch (event.type) {
+    case "prompt":
+      onState("prompt", undefined);
+      break;
     case "ttft_start":
-      onState("timer", undefined);
+      onState("progress", undefined);
       break;
     case "context_used":
       setContextUsed(event.count);
       break;
     case "thinking_chunk":
-      onState("thinking", event.text);
+      onState("progress", "token");
       break;
     case "response_chunk":
-      onState("response", event.text);
+      onState("progress", "token");
       break;
-    case "tool_start":
-      onState("tool", { name: event.name });
+    case "tool":
+      if (event.tool === "read") {
+        onState("progress", "read");
+      } else if (event.tool === "list") {
+        onState("progress", "list");
+      } else {
+        onState("tool", event.tool);
+      }
       break;
     case "error":
+      // TODO: fold errors into summaries
+      section();
       log(`ERROR: ${event.message}`);
       break;
-    case "done":
-      onState("prompt", event.text);
+    case "response":
+      onState("response", event.text);
       break;
   }
 }

@@ -10,6 +10,7 @@ import type { Tool } from "ollama";
 import chalk from "chalk";
 import glow from "./ui/glow";
 import { log } from "./ui/output";
+import { trigger } from "./ui/ui";
 
 export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
@@ -60,7 +61,6 @@ export const tools: ToolSet = {
       },
     },
     run: ({ file }: ReadArgs) => {
-      log(`READ: ${file}`);
       const err = requirePath(file, "file");
       if (err) return err;
       return readFileSync(file, "utf-8");
@@ -84,7 +84,6 @@ export const tools: ToolSet = {
     },
     run: ({ path }: ListArgs) => {
       const resolvedPath = path ?? process.cwd();
-      log(`LIST: ${resolvedPath}`);
       const err = requirePath(resolvedPath, "directory");
       if (err) return err;
       return readdirSync(resolvedPath).join("\n");
