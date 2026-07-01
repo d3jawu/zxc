@@ -81,16 +81,13 @@ export function trigger(event: AgentEvent) {
     case "prompt":
       onState("prompt", undefined);
       break;
-    case "ttft_start":
+    case "start":
       onState("progress", undefined);
       break;
-    case "context_used":
+    case "context":
       setContextUsed(event.count);
       break;
-    case "thinking_chunk":
-      onState("progress", "token");
-      break;
-    case "response_chunk":
+    case "token":
       onState("progress", "token");
       break;
     case "tool":
