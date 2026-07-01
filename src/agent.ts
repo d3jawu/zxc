@@ -74,9 +74,10 @@ export default async function* run({
       if (part.message.thinking) {
         yield { type: "token" };
       } else if (part.message.tool_calls) {
-        tool = true;
         pushHistory(part.message);
         for (const toolCall of part.message.tool_calls) {
+          // Only set tool to true if there actually was a tool call
+          tool = true;
           const toolDef = toolset[toolCall.function.name as ToolName];
           if (!toolDef) {
             yield {
