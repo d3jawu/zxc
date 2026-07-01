@@ -21,6 +21,7 @@ const summary = () =>
 
 export default {
   start: () => {
+    write(ansi.cursor.hide);
     section();
     startTime = Date.now();
     interval = setInterval(() => {
@@ -28,6 +29,7 @@ export default {
     }, 50);
   },
   end: () => {
+    write(ansi.cursor.show);
     clearInterval(interval);
     counts = {
       read: 0,
