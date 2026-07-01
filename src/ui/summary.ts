@@ -1,3 +1,4 @@
+import type { ChalkInstance } from "chalk";
 import { section, write } from "./output";
 import colors from "./colors";
 
@@ -11,13 +12,36 @@ let counts = {
 
 let interval: NodeJS.Timeout;
 let startTime = Date.now();
+const runTimes: number[] = [];
+let maxRunTime = 0;
 
-const summary = () =>
-  `${ansi.cursor.back(1000)}${colors.yellow("model(")}${colors.gray("thinking")}${colors.yellow(")")}: ` +
-  `${((Date.now() - startTime) / 1000).toFixed(2)}s` +
-  (counts.token ? `, ${counts.token} token(s)` : "") +
-  (counts.read ? `, read ${counts.read} file(s)` : "") +
-  (counts.list ? `, list ${counts.list} dir(s)` : "");
+const summary = () => {
+  const elapsed = (Date.now() - startTime) / 1000;
+  const averageRunTime =
+    runTimes.reduce((val, sum) => val + sum, 0) / runTimes.length;
+  let color: ChalkInstance;
+  if (elapsed <= averageRunTime) {
+    color = colors.green;
+  } else if (elapsed <= maxRunTime) {
+    color = colors.yellow;
+  } else {
+    color = colors.red;
+  }
+
+  return (
+    `${ansi.cursor.back(1000)}${colors.yellow("model(")}${colors.gray("thinking")}${colors.yellow(")")}: ` +
+    `${color(elapsed.toFixed(0))}${colors.gray("s")}` +
+    (counts.token
+      ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens`)}`
+      : "") +
+    (counts.read
+      ? `${colors.gray(", read")} ${counts.read} ${colors.gray("file(s)")}`
+      : "") +
+    (counts.list
+      ? `${colors.gray(", list")} ${counts.list} ${colors.gray("dir(s)")}`
+      : "")
+  );
+};
 
 export default {
   start: () => {
@@ -29,6 +53,11 @@ export default {
     }, 50);
   },
   end: () => {
+    const elapsed = (Date.now() - startTime) / 1000;
+    if (elapsed > maxRunTime) {
+      maxRunTime = elapsed;
+    }
+    runTimes.push(elapsed);
     write(ansi.cursor.show);
     clearInterval(interval);
     counts = {
