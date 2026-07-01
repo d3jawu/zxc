@@ -9,7 +9,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
 import glow from "./ui/glow";
-import { log } from "./ui/output";
+import { log, write } from "./ui/output";
 
 export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
@@ -60,7 +60,6 @@ export const tools: ToolSet = {
       },
     },
     run: ({ file }: ReadArgs) => {
-      log(`READ: ${file}`);
       const err = requirePath(file, "file");
       if (err) return err;
       return readFileSync(file, "utf-8");
@@ -84,7 +83,6 @@ export const tools: ToolSet = {
     },
     run: ({ path }: ListArgs) => {
       const resolvedPath = path ?? process.cwd();
-      log(`LIST: ${resolvedPath}`);
       const err = requirePath(resolvedPath, "directory");
       if (err) return err;
       return readdirSync(resolvedPath).join("\n");
@@ -253,7 +251,7 @@ export const tools: ToolSet = {
           return output;
         }
 
-        log(chalk.gray(error || output));
+        write(chalk.gray(error || output));
         return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
       } catch (e) {
         log(String(e));

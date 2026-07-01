@@ -3,14 +3,13 @@ import ollama from "./ollama";
 import type { ToolName, ToolSet } from "./tools";
 
 export type AgentEvent =
-  | { type: "ttft_start" }
-  | { type: "ttft_end" }
-  | { type: "context_used"; count: number }
-  | { type: "thinking_chunk"; text: string }
-  | { type: "tool_start"; name: string }
-  | { type: "response_chunk"; text: string }
-  | { type: "error"; message: string }
-  | { type: "done"; text: string };
+  | { type: "prompt" }
+  | { type: "start" }
+  | { type: "context"; count: number }
+  | { type: "tool"; tool: ToolName }
+  | { type: "token" }
+  | { type: "response"; text: string }
+  | { type: "error"; message: string };
 
 type AgentOptions = {
   systemPrompt: string;
@@ -34,6 +33,7 @@ export default async function* run({
 
   while (true) {
     if (!tool && gotResponse) {
+      yield { type: "prompt" };
       let line: string | null = null;
       while (!line) {
         line = await prompt();
@@ -42,7 +42,7 @@ export default async function* run({
     }
     gotResponse = false;
 
-    yield { type: "ttft_start" };
+    yield { type: "start" };
     let response;
     while (true) {
       try {
@@ -62,23 +62,21 @@ export default async function* run({
         yield { type: "error", message: `Ollama failed, retrying.\n${e}` };
       }
     }
-    yield { type: "ttft_end" };
 
     let fullResponse = "";
     for await (const part of response) {
       if (part.prompt_eval_count !== undefined) {
-        yield { type: "context_used", count: part.prompt_eval_count };
+        yield { type: "context", count: part.prompt_eval_count };
       }
       if (part.done) continue;
 
       tool = false;
       if (part.message.thinking) {
-        yield { type: "thinking_chunk", text: part.message.thinking };
+        yield { type: "token" };
       } else if (part.message.tool_calls) {
         tool = true;
         pushHistory(part.message);
         for (const toolCall of part.message.tool_calls) {
-          yield { type: "tool_start", name: toolCall.function.name };
           const toolDef = toolset[toolCall.function.name as ToolName];
           if (!toolDef) {
             yield {
@@ -92,6 +90,7 @@ export default async function* run({
             });
             continue;
           }
+          yield { type: "tool", tool: toolCall.function.name as ToolName };
           const toolResponse = await toolDef.run(toolCall.function.arguments);
           pushHistory({
             role: "tool",
@@ -101,14 +100,14 @@ export default async function* run({
         }
       } else if (part.message.content) {
         fullResponse += part.message.content;
-        yield { type: "response_chunk", text: part.message.content };
+        yield { type: "token" };
       }
     }
-    yield { type: "done", text: fullResponse };
 
     if (fullResponse) {
       pushHistory({ role: "assistant", content: fullResponse });
       gotResponse = true;
+      yield { type: "response", text: fullResponse };
     }
   }
 }

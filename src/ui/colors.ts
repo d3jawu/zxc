@@ -5,7 +5,7 @@ const colors = {
   yellow: chalk.hex("#f1fa8c"),
   red: chalk.hex("#ff5555"),
   purple: chalk.hex("#bd93f9"),
-  gray: chalk.gray,
+  gray: chalk.hex("#bbb"),
 };
 
 export default colors;
