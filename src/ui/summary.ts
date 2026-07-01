@@ -45,8 +45,9 @@ const summary = () => {
 
 export default {
   start: () => {
-    write(ansi.cursor.hide);
     section();
+    write("\n");
+    write(ansi.cursor.hide);
     startTime = Date.now();
     interval = setInterval(() => {
       write(summary());

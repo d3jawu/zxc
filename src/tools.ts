@@ -9,8 +9,7 @@ import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
 import glow from "./ui/glow";
-import { log } from "./ui/output";
-import { trigger } from "./ui/ui";
+import { log, write } from "./ui/output";
 
 export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
@@ -252,7 +251,7 @@ export const tools: ToolSet = {
           return output;
         }
 
-        log(chalk.gray(error || output));
+        write(chalk.gray(error || output));
         return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
       } catch (e) {
         log(String(e));

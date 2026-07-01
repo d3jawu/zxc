@@ -47,13 +47,14 @@ const stateHandlers: {
     tick: (payload) => {
       section();
       write(
-        `${colors.green("tool(")}${colors.gray(payload)}${colors.green(")")}: `,
+        `\n${colors.green("tool(")}${colors.gray(payload)}${colors.green(")")}: `,
       );
     },
   },
   response: {
     enter: (text) => {
       section();
+      write("\n");
       write(modelPrelude("response"));
       if (text) {
         section();

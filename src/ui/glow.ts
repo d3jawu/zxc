@@ -1,4 +1,5 @@
 import { spawnSync } from "child_process";
+import { reset } from "./output";
 
 // Check glow availability once on startup and exit if missing
 if (spawnSync("glow", ["--version"], { encoding: "utf-8" }).status !== 0) {
@@ -14,4 +15,5 @@ export default (input: string) => {
     ["-s", "dracula", "-w", process.stdout.columns.toString()],
     { input, encoding: "utf-8", stdio: "inherit" },
   );
+  reset(false);
 };

@@ -3,9 +3,10 @@ import { userInfo } from "os";
 import readline from "readline/promises";
 import { modelRef } from "../index";
 import { clearHistory, getHistory } from "../history";
-import { write, log } from "./output";
+import { write, log, section, reset } from "./output";
 import glow from "./glow";
 import colors from "./colors";
+
 let contextUsed = 0;
 
 export const setContextUsed = (val: number) => {
@@ -13,7 +14,7 @@ export const setContextUsed = (val: number) => {
 };
 
 export default async function prompt(): Promise<string | null> {
-  write("\n\n");
+  section();
   let contextLength: number | undefined;
   const ps = await ollama.ps();
   const foundModel = ps.models.find(({ model: m }) => m === modelRef.current);
@@ -75,7 +76,7 @@ export default async function prompt(): Promise<string | null> {
       }
       continue;
     }
-    write(""); // Tell output it needs a newline
+    reset(false);
     return line;
   }
 }
