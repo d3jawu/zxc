@@ -193,6 +193,7 @@ export const tools: ToolSet = {
       },
     },
     run: ({ file, contents }: WriteArgs) => {
+      log(`WRITE: ${file}`);
       const originalContent = statSync(file, {
         throwIfNoEntry: false,
       })?.isFile()
