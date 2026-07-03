@@ -35,10 +35,10 @@ const summary = () => {
       ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens`)}`
       : "") +
     (counts.read
-      ? `${colors.gray(", read")} ${counts.read} ${colors.gray("file(s)")}`
+      ? `${colors.gray(",")} ${colors.green("read")} ${counts.read} ${colors.gray("file(s)")}`
       : "") +
     (counts.list
-      ? `${colors.gray(", list")} ${counts.list} ${colors.gray("dir(s)")}`
+      ? `${colors.gray(",")} ${colors.green("list")} ${counts.list} ${colors.gray("dir(s)")}`
       : "")
   );
 };
