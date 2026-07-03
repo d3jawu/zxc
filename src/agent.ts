@@ -1,3 +1,4 @@
+import type { ToolCall } from "ollama";
 import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
 import type { ToolName, ToolSet } from "./tools";
@@ -64,42 +65,23 @@ export default async function* run({
     }
 
     let fullResponse = "";
+    tool = false;
+    let toolCalls: ToolCall[] = [];
     for await (const part of response) {
       if (part.prompt_eval_count !== undefined) {
         yield { type: "context", count: part.prompt_eval_count };
       }
-      if (part.done) continue;
 
-      tool = false;
       if (part.message.thinking) {
         yield { type: "token" };
-      } else if (part.message.tool_calls) {
+      }
+
+      if (part.message.tool_calls) {
         pushHistory(part.message);
-        for (const toolCall of part.message.tool_calls) {
-          // Only set tool to true if there actually was a tool call
-          tool = true;
-          const toolDef = toolset[toolCall.function.name as ToolName];
-          if (!toolDef) {
-            yield {
-              type: "error",
-              message: `Attempted to call invalid tool: ${toolCall.function.name}`,
-            };
-            pushHistory({
-              role: "tool",
-              tool_name: toolCall.function.name,
-              content: "",
-            });
-            continue;
-          }
-          yield { type: "tool", tool: toolCall.function.name as ToolName };
-          const toolResponse = await toolDef.run(toolCall.function.arguments);
-          pushHistory({
-            role: "tool",
-            tool_name: toolCall.function.name,
-            content: toolResponse,
-          });
-        }
-      } else if (part.message.content) {
+        toolCalls = part.message.tool_calls;
+      }
+
+      if (part.message.content) {
         fullResponse += part.message.content;
         yield { type: "token" };
       }
@@ -109,6 +91,30 @@ export default async function* run({
       pushHistory({ role: "assistant", content: fullResponse });
       gotResponse = true;
       yield { type: "response", text: fullResponse };
+    }
+
+    for (const toolCall of toolCalls) {
+      tool = true;
+      const toolDef = toolset[toolCall.function.name as ToolName];
+      if (!toolDef) {
+        yield {
+          type: "error",
+          message: `Attempted to call invalid tool: ${toolCall.function.name}`,
+        };
+        pushHistory({
+          role: "tool",
+          tool_name: toolCall.function.name,
+          content: `Invalid tool: ${toolCall.function.name}`,
+        });
+        continue;
+      }
+      yield { type: "tool", tool: toolCall.function.name as ToolName };
+      const toolResponse = await toolDef.run(toolCall.function.arguments);
+      pushHistory({
+        role: "tool",
+        tool_name: toolCall.function.name,
+        content: toolResponse,
+      });
     }
   }
 }
