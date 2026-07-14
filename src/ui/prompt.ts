@@ -43,7 +43,7 @@ export default async function prompt(): Promise<string | null> {
     });
 
     const line = await rl.question(
-      `${colors.purple(userInfo().username + "(")}${colors.gray(contextString)}${colors.purple(")")}: `,
+      `${colors.blue(userInfo().username + "(")}${colors.gray(contextString)}${colors.blue(")")}: `,
     );
     rl.close();
 

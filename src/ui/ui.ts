@@ -24,7 +24,7 @@ type StateHandler<S extends State> = {
 };
 
 const modelPrelude = (label: State) =>
-  `${colors.yellow("model(")}${colors.gray(label)}${colors.yellow(")")}: `;
+  `${colors.purple("model(")}${colors.gray(label)}${colors.purple(")")}: `;
 
 const stateHandlers: {
   [K in State]: StateHandler<K>;
@@ -47,7 +47,7 @@ const stateHandlers: {
     tick: (payload) => {
       section();
       write(
-        `\n${colors.green("tool(")}${colors.gray(payload)}${colors.green(")")}: `,
+        `\n${colors.pink("tool(")}${colors.gray(payload)}${colors.pink(")")}: `,
       );
     },
   },

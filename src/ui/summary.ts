@@ -29,16 +29,16 @@ const summary = () => {
   }
 
   return (
-    `${ansi.cursor.back(1000)}${colors.yellow("model(")}${colors.gray("thinking")}${colors.yellow(")")}: ` +
+    `${ansi.cursor.back(1000)}${colors.purple("model(")}${colors.gray("thinking")}${colors.purple(")")}: ` +
     `${color(elapsed.toFixed(0))}${colors.gray("s")}` +
     (counts.token
       ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens`)}`
       : "") +
     (counts.read
-      ? `${colors.gray(",")} ${colors.green("read")} ${counts.read} ${colors.gray("file(s)")}`
+      ? `${colors.gray(",")} ${colors.pink("read")} ${counts.read} ${colors.gray("file(s)")}`
       : "") +
     (counts.list
-      ? `${colors.gray(",")} ${colors.green("list")} ${counts.list} ${colors.gray("dir(s)")}`
+      ? `${colors.gray(",")} ${colors.pink("list")} ${counts.list} ${colors.gray("dir(s)")}`
       : "")
   );
 };
