@@ -3,16 +3,13 @@ import run from "./agent";
 import { tools } from "./tools";
 import { write } from "./ui/output";
 import { trigger } from "./ui/ui";
-import prompt from "./ui/prompt";
+import config from "./config";
 
-export const modelRef = { current: "qwen3.6:27b-coding-nvfp4" };
-
-write(`Using model ${modelRef.current}.`);
+write(`Using model ${config.model}.`);
 
 const agent = run({
-  model: modelRef.current,
+  model: config.model,
   toolset: tools,
-  prompt,
 });
 
 for await (const event of agent) {

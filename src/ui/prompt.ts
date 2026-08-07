@@ -1,11 +1,11 @@
-import ollama from "../ollama";
+import ollama, { listModels } from "../ollama";
 import { userInfo } from "os";
 import readline from "readline/promises";
-import { modelRef } from "../index";
 import { clearHistory, getHistory } from "../history";
-import { write, log, section, reset } from "./output";
+import { log, section, reset } from "./output";
 import glow from "./glow";
 import colors from "./colors";
+import config, { setConfig } from "../config";
 import { select } from "@inquirer/prompts";
 
 let contextUsed = 0;
@@ -18,7 +18,7 @@ export default async function prompt(): Promise<string | null> {
   section();
   let contextLength: number | undefined;
   const ps = await ollama.ps();
-  const foundModel = ps.models.find(({ model: m }) => m === modelRef.current);
+  const foundModel = ps.models.find(({ model: m }) => m === config.model);
   if (
     foundModel &&
     "context_length" in foundModel &&
@@ -51,29 +51,19 @@ export default async function prompt(): Promise<string | null> {
     if (line && line.startsWith("/")) {
       const [command, ...args] = line.split(" ");
       if (command === "/model") {
-        const models = (await ollama.list()).models.map((model) => model.name);
-        if (args.length === 0) {
-          const selectedModel = await select({
-            message: `Select a model (currently using ${modelRef.current})`,
-            choices: models.map((name) => ({ name, value: name })),
-            theme: {
-              prefix: {
-                idle: "",
-                done: "",
-              },
+        const models = await listModels();
+        const selectedModel = await select({
+          message: `Select a model (currently using ${config.model})`,
+          choices: models.map((name) => ({ name, value: name })),
+          theme: {
+            prefix: {
+              idle: "",
+              done: "",
             },
-          });
-          log(`Model set to ${selectedModel}.`);
-          modelRef.current = selectedModel;
-        } else {
-          const newModel = args[0] as string;
-          if (!models.includes(newModel)) {
-            log(`Model not found: ${newModel}`);
-          } else {
-            log(`Model set to ${newModel}.`);
-            modelRef.current = newModel;
-          }
-        }
+          },
+        });
+        log(`Model set to ${selectedModel}.`);
+        setConfig("model", selectedModel);
       } else if (command === "/md") {
         const history = getHistory();
         const lastMessage = history[history.length - 1];
