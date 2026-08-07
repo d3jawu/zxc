@@ -24,7 +24,7 @@ type StateHandler<S extends State> = {
 };
 
 const modelPrelude = (label: State) =>
-  `${colors.purple("model(")}${colors.gray(label)}${colors.purple(")")}: `;
+  `${colors.blue("model(")}${colors.gray(label)}${colors.blue(")")}: `;
 
 const stateHandlers: {
   [K in State]: StateHandler<K>;

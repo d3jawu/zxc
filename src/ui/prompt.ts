@@ -6,6 +6,7 @@ import { clearHistory, getHistory } from "../history";
 import { write, log, section, reset } from "./output";
 import glow from "./glow";
 import colors from "./colors";
+import { select } from "@inquirer/prompts";
 
 let contextUsed = 0;
 
@@ -43,7 +44,7 @@ export default async function prompt(): Promise<string | null> {
     });
 
     const line = await rl.question(
-      `${colors.blue(userInfo().username + "(")}${colors.gray(contextString)}${colors.blue(")")}: `,
+      `${colors.purple(userInfo().username + "(")}${colors.gray(contextString)}${colors.purple(")")}: `,
     );
     rl.close();
 
@@ -52,8 +53,18 @@ export default async function prompt(): Promise<string | null> {
       if (command === "/model") {
         const models = (await ollama.list()).models.map((model) => model.name);
         if (args.length === 0) {
-          log("Available models:");
-          log(models.join("\n"));
+          const selectedModel = await select({
+            message: `Select a model (currently using ${modelRef.current})`,
+            choices: models.map((name) => ({ name, value: name })),
+            theme: {
+              prefix: {
+                idle: "",
+                done: "",
+              },
+            },
+          });
+          log(`Model set to ${selectedModel}.`);
+          modelRef.current = selectedModel;
         } else {
           const newModel = args[0] as string;
           if (!models.includes(newModel)) {

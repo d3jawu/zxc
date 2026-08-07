@@ -29,7 +29,7 @@ const summary = () => {
   }
 
   return (
-    `${ansi.cursor.back(1000)}${colors.purple("model(")}${colors.gray("thinking")}${colors.purple(")")}: ` +
+    `${ansi.cursor.back(1000)}${colors.blue("model(")}${colors.gray("thinking")}${colors.blue(")")}: ` +
     `${color(elapsed.toFixed(0))}${colors.gray("s")}` +
     (counts.token
       ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens`)}`
