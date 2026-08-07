@@ -13,7 +13,6 @@ export type AgentEvent =
   | { type: "error"; message: string };
 
 type AgentOptions = {
-  systemPrompt: string;
   model: string;
   toolset: ToolSet;
   prompt: () => Promise<string | null>;
@@ -21,13 +20,9 @@ type AgentOptions = {
 
 export default async function* run({
   model,
-  systemPrompt,
   toolset,
   prompt,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
-  if (getHistory().length === 0) {
-    pushHistory({ role: "system", content: systemPrompt });
-  }
   // Whether to loop again for a tool call.
   let tool = false;
   let gotResponse = true;
