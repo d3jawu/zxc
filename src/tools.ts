@@ -10,6 +10,7 @@ import type { Tool } from "ollama";
 import chalk from "chalk";
 import glow from "./ui/glow";
 import { log, write } from "./ui/output";
+import colors from "./ui/colors";
 
 export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
@@ -26,7 +27,9 @@ export type ToolWithImplementation<T = any> = Tool & {
 };
 
 function denyReason(): string | null {
-  const input = prompt("Confirm (↵) or deny (give reason):");
+  const input = prompt(
+    `${colors.green("Confirm")} (↵) or ${colors.red("deny")} (give reason):`,
+  );
   return input?.trim() || null;
 }
 
@@ -115,7 +118,7 @@ export const tools: ToolSet = {
       },
     },
     run: ({ file, target: targetText, replacement }: EditArgs) => {
-      log(`EDIT: ${file}`);
+      log(`${file}`);
       const err = requirePath(file, "file");
       if (err) return err;
 
@@ -191,7 +194,7 @@ export const tools: ToolSet = {
       },
     },
     run: ({ file, contents }: WriteArgs) => {
-      log(`WRITE: ${file}`);
+      log(`${file}`);
       const originalContent = statSync(file, {
         throwIfNoEntry: false,
       })?.isFile()
@@ -231,7 +234,7 @@ export const tools: ToolSet = {
       },
     },
     run: ({ command }: BashArgs) => {
-      log(`RUN: ${command}`);
+      log(`${command}`);
 
       const reason = denyReason();
       if (reason !== null) {
