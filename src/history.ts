@@ -21,6 +21,16 @@ if (existsSync(HISTORY_FILE)) {
 }
 if (history.length === 0) {
   pushHistory({ role: "system", content: config.systemPrompt });
+
+  const AGENTS_FILE = join(process.cwd(), "AGENTS.md");
+
+  if (existsSync(AGENTS_FILE)) {
+    pushHistory({
+      role: "system",
+      content: readFileSync(AGENTS_FILE, "utf-8"),
+    });
+    log(`Loaded AGENTS.md.`);
+  }
 }
 
 export function pushHistory(message: Message): void {
