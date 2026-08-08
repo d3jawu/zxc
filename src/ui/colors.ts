@@ -1,6 +1,7 @@
 import chalk from "chalk";
 
 const colors = {
+  white: chalk.hex("#fff"),
   green: chalk.hex("#50fa7b"),
   yellow: chalk.hex("#f1fa8c"),
   red: chalk.hex("#ff5555"),

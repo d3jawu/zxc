@@ -245,9 +245,23 @@ export const tools: ToolSet = {
         const proc = spawnSync({
           cmd: ["bash", "-c", command],
         });
-        const output = proc.stdout.toString();
+        let output = proc.stdout.toString();
         const error = proc.stderr.toString();
         const exitCode = proc.exitCode ?? -1;
+
+        // Truncate output if longer than 20 lines
+        const TRUNCATE_AFTER = 20;
+        let lines = output.split("\n");
+        // Remove trailing empty string caused by trailing newline
+        if (lines.length > 0 && lines.at(-1) === "") {
+          lines.pop();
+        }
+        if (lines.length > TRUNCATE_AFTER) {
+          const first10 = chalk.gray(lines.slice(0, 10).join("\n"));
+          const last10 = chalk.gray(lines.slice(-10).join("\n"));
+          const omitted = lines.length - TRUNCATE_AFTER;
+          output = `${first10}\n\n${colors.white(`--- ${omitted} line(s) omitted ---`)}\n\n${last10}`;
+        }
 
         if (exitCode === 0) {
           log(chalk.gray(output));
