@@ -4,11 +4,11 @@ import { tools } from "./tools";
 import { write } from "./ui/output";
 import { trigger } from "./ui/ui";
 import config from "./config";
+import colors from "./ui/colors";
 
-write(`Using model ${config.model}.`);
+write(`Using model ${colors.blue(config.model)}.`);
 
 const agent = run({
-  model: config.model,
   toolset: tools,
 });
 

@@ -1,6 +1,7 @@
 import type { ToolCall } from "ollama";
 import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
+import config from "./config";
 import type { ToolName, ToolSet } from "./tools";
 import prompt from "./ui/prompt";
 
@@ -14,12 +15,10 @@ export type AgentEvent =
   | { type: "error"; message: string };
 
 type AgentOptions = {
-  model: string;
   toolset: ToolSet;
 };
 
 export default async function* run({
-  model,
   toolset,
 }: AgentOptions): AsyncGenerator<AgentEvent> {
   // Whether to loop again for a tool call.
@@ -42,7 +41,7 @@ export default async function* run({
     while (true) {
       try {
         response = await ollama.chat({
-          model,
+          model: config.model,
           stream: true,
           messages: getHistory(),
           tools: Object.values(toolset).map((t) => ({

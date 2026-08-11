@@ -53,7 +53,7 @@ export default async function prompt(): Promise<string | null> {
       if (command === "/model") {
         const models = await listModels();
         const selectedModel = await select({
-          message: `Select a model (currently using ${config.model})`,
+          message: `Select a model (currently using ${colors.blue(config.model)})`,
           choices: models.map((name) => ({ name, value: name })),
           theme: {
             prefix: {
@@ -62,7 +62,7 @@ export default async function prompt(): Promise<string | null> {
             },
           },
         });
-        log(`Model set to ${selectedModel}.`);
+        log(`Model set to ${colors.blue(selectedModel)}.`);
         setConfig("model", selectedModel);
       } else if (command === "/md") {
         const history = getHistory();
