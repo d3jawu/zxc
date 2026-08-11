@@ -2,7 +2,8 @@ import type { ToolCall } from "ollama";
 import { pushHistory, getHistory } from "./history";
 import ollama from "./ollama";
 import config from "./config";
-import type { ToolName, ToolSet } from "./tools";
+import type { ToolName } from "./tools";
+import toolset from "./tools";
 import prompt from "./ui/prompt";
 
 export type AgentEvent =
@@ -14,13 +15,7 @@ export type AgentEvent =
   | { type: "response"; text: string }
   | { type: "error"; message: string };
 
-type AgentOptions = {
-  toolset: ToolSet;
-};
-
-export default async function* run({
-  toolset,
-}: AgentOptions): AsyncGenerator<AgentEvent> {
+export default async function* run(): AsyncGenerator<AgentEvent> {
   // Whether to loop again for a tool call.
   let tool = false;
   let gotResponse = true;

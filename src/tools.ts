@@ -44,7 +44,7 @@ const requirePath = (path: string, type: "file" | "directory") => {
   }
 };
 
-export const tools: ToolSet = {
+const tools: ToolSet = {
   read: {
     type: "function",
     function: {
@@ -278,3 +278,5 @@ export const tools: ToolSet = {
     },
   },
 };
+
+export default tools;
