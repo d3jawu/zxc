@@ -1,4 +1,4 @@
-import ollama, { listModels } from "../ollama";
+import { ps as ops, listModels } from "../ollama";
 import { userInfo } from "os";
 import readline from "readline/promises";
 import { clearHistory, getHistory } from "../history";
@@ -17,7 +17,7 @@ export const setContextUsed = (val: number) => {
 export default async function prompt(): Promise<string | null> {
   section();
   let contextLength: number | undefined;
-  const ps = await ollama.ps();
+  const ps = await ops();
   const foundModel = ps.models.find(({ model: m }) => m === config.model);
   if (
     foundModel &&
