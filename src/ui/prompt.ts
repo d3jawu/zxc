@@ -1,7 +1,7 @@
 import { ps as ops, listModels } from "../ollama";
 import { userInfo } from "os";
 import readline from "readline/promises";
-import { clearHistory, getHistory } from "../history";
+import { getHistory } from "../history";
 import { log, section, reset } from "./output";
 import glow from "./glow";
 import colors from "./colors";
@@ -39,7 +39,6 @@ export default async function prompt(): Promise<string | null> {
       output: process.stdout,
     });
     rl.on("SIGINT", () => {
-      clearHistory();
       process.exit(0);
     });
 

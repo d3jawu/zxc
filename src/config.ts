@@ -1,4 +1,3 @@
-import { listModels } from "./ollama";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -6,6 +5,8 @@ type Config = {
   model: string;
   systemPrompt: string;
 };
+
+const { listModels } = await import("./ollama");
 
 const defaultConfig: Config = {
   model: (await listModels())[0] || "",
@@ -33,7 +34,7 @@ Guidelines:
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`,
 };
 
-const configDir = path.join(os.homedir(), ".zxc");
+export const configDir = path.join(os.homedir(), ".zxc");
 if (!fs.existsSync(configDir)) {
   fs.mkdirSync(configDir, { recursive: true });
 }

@@ -24,6 +24,27 @@ export async function chat() {
   });
 }
 
+export async function summary(): Promise<string> {
+  const raw = (
+    await ollama.chat({
+      model: config.model,
+      stream: false,
+      messages: [
+        ...getHistory(),
+        {
+          role: "system",
+          content:
+            "Respond immediately with a valid hyphen-delimited filename summarizing this chat, e.g. 'refactor-api-layer'. Up to six words is acceptable. Do not output anything else. Do not add an extension. Do not perform tool calls or do further investigation.",
+        },
+      ],
+      keep_alive: "20m",
+    })
+  ).message.content;
+
+  const match = raw.match(/^[a-z][a-z0-9-]*$/);
+  return match ? match[0] : "session";
+}
+
 export async function ps() {
   return ollama.ps();
 }

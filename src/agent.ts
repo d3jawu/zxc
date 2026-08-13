@@ -1,5 +1,5 @@
 import type { ToolCall } from "ollama";
-import { pushHistory, getHistory } from "./history";
+import { pushHistory, setHistoryFile } from "./history";
 import { chat } from "./ollama";
 import type { ToolName } from "./tools";
 import toolset from "./tools";
@@ -68,6 +68,9 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
       pushHistory({ role: "assistant", content: fullResponse });
       gotResponse = true;
       yield { type: "response", text: fullResponse };
+
+      // Intentional fire-and-forget here
+      setHistoryFile();
     }
 
     for (const toolCall of toolCalls) {

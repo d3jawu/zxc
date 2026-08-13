@@ -1,49 +1,41 @@
 import type { Message } from "ollama";
-import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
-import { log, section } from "./ui/output";
-import config from "./config";
-
-const HISTORY_FILE = join(process.cwd(), ".history.json");
+import { log } from "./ui/output";
+import config, { configDir } from "./config";
 
 const history: Message[] = [];
 
-if (existsSync(HISTORY_FILE)) {
-  const fileHistory = JSON.parse(
-    readFileSync(HISTORY_FILE, "utf-8"),
-  ) as Message[];
-  history.push(...fileHistory);
-  log("Resuming interrupted session.");
-  const lastMessage = history[history.length - 1];
-  log(
-    `Left off at ${lastMessage?.role}: "${lastMessage?.content.slice(0, 80)}..."`,
-  );
-}
-if (history.length === 0) {
-  pushHistory({ role: "system", content: config.systemPrompt });
+export let historyFile: undefined | string = undefined;
 
-  const AGENTS_FILE = join(process.cwd(), "AGENTS.md");
-
-  if (existsSync(AGENTS_FILE)) {
-    pushHistory({
-      role: "system",
-      content: readFileSync(AGENTS_FILE, "utf-8"),
-    });
-    log(`Loaded AGENTS.md.`);
+export async function setHistoryFile() {
+  if (historyFile) {
+    return;
   }
+
+  const { summary } = await import("./ollama");
+  const slug = await summary();
+
+  historyFile = join(configDir, `history-${Date.now()}-${slug}.json`);
+  writeFileSync(historyFile, JSON.stringify(history), "utf-8");
 }
 
 export function pushHistory(message: Message): void {
   history.push(message);
-  writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), "utf-8");
+  if (historyFile) {
+    writeFileSync(historyFile, JSON.stringify(history), "utf-8");
+  }
 }
 
 export const getHistory = (): Message[] => history;
 
-export function clearHistory(): void {
-  if (existsSync(HISTORY_FILE)) {
-    section();
-    log("Ending session.");
-    rmSync(HISTORY_FILE);
-  }
+pushHistory({ role: "system", content: config.systemPrompt });
+
+const AGENTS_FILE = join(process.cwd(), "AGENTS.md");
+if (existsSync(AGENTS_FILE)) {
+  pushHistory({
+    role: "system",
+    content: readFileSync(AGENTS_FILE, "utf-8"),
+  });
+  log(`Loaded AGENTS.md.`);
 }
