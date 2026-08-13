@@ -4,7 +4,7 @@ import { join } from "path";
 import { log } from "./ui/output";
 import config, { configDir } from "./config";
 
-const history: Message[] = [];
+let history: Message[] = [];
 
 export let historyFile: undefined | string = undefined;
 
@@ -28,6 +28,12 @@ export function pushHistory(message: Message): void {
 }
 
 export const getHistory = (): Message[] => history;
+
+export function loadHistory(filePath: string): void {
+  history = JSON.parse(readFileSync(filePath, "utf-8")) as Message[];
+  historyFile = filePath;
+  log(`Loaded history from ${filePath}`);
+}
 
 pushHistory({ role: "system", content: config.systemPrompt });
 
