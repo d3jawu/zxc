@@ -1,12 +1,11 @@
 import { ps as ops, listModels } from "../ollama";
 import { userInfo } from "os";
 import readline from "readline/promises";
-import { getHistory, loadHistory } from "../history";
+import { loadHistory } from "../history";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { configDir } from "../config";
 import { log, section, reset } from "./output";
-import glow from "./glow";
 import colors from "./colors";
 import config, { setConfig } from "../config";
 import { select } from "@inquirer/prompts";
@@ -71,14 +70,6 @@ export default async function prompt(): Promise<string | null> {
         }
         log(`Model set to ${colors.blue(selectedModel)}.`);
         setConfig("model", selectedModel);
-      } else if (command === "/md") {
-        const history = getHistory();
-        const lastMessage = history[history.length - 1];
-        if (!lastMessage) {
-          log("Nothing to show.");
-          continue;
-        }
-        glow(lastMessage.content);
       } else if (command === "/resume") {
         const files = readdirSync(configDir);
         const historyFiles = files
