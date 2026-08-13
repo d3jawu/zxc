@@ -82,8 +82,10 @@ export default async function prompt(): Promise<string | null> {
             return {
               name: `${date.toLocaleString()} - ${summary}`,
               value: join(configDir, f),
+              timestamp: Number(timestamp),
             };
-          });
+          })
+          .sort((a, b) => b.timestamp - a.timestamp);
         if (historyFiles.length === 0) {
           log("No history files found.");
           continue;
