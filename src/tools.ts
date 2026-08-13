@@ -27,6 +27,7 @@ export type ToolWithImplementation<T = any> = Tool & {
 };
 
 function denyReason(): string | null {
+  process.stdout.write("\u0007");
   const input = prompt(
     `${colors.green("Confirm")} (↵) or ${colors.red("deny")} (give reason):`,
   );
@@ -245,7 +246,7 @@ const tools: ToolSet = {
         const proc = spawnSync({
           cmd: ["bash", "-c", command],
         });
-        let output = proc.stdout.toString();
+        const output = proc.stdout.toString();
         const error = proc.stderr.toString();
         const exitCode = proc.exitCode ?? -1;
 
@@ -260,11 +261,14 @@ const tools: ToolSet = {
           const first10 = chalk.gray(lines.slice(0, 10).join("\n"));
           const last10 = chalk.gray(lines.slice(-10).join("\n"));
           const omitted = lines.length - TRUNCATE_AFTER;
-          output = `${first10}\n\n${colors.white(`--- ${omitted} line(s) omitted ---`)}\n\n${last10}`;
+          log(
+            `${first10}\n\n${colors.white(`--- ${omitted} line(s) omitted ---`)}\n\n${last10}`,
+          );
+        } else {
+          log(output);
         }
 
         if (exitCode === 0) {
-          log(chalk.gray(output));
           return output;
         }
 
