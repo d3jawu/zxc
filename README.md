@@ -4,6 +4,8 @@
 
 # Usage
 
+You must have [Ollama](https://ollama.com/) and [Glow](https://github.com/charmbracelet/glow) installed.
+
 Install dependencies:
 
 ```bash
@@ -15,5 +17,3 @@ Run:
 ```bash
 bun run start
 ```
-
-To show responses in MarkDown with the `/md` command, you'll need [Glow](https://github.com/charmbracelet/glow) installed.
