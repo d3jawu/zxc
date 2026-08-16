@@ -32,7 +32,7 @@ export async function summary(): Promise<string> {
       messages: [
         ...getHistory(),
         {
-          role: "system",
+          role: "user",
           content:
             "Respond immediately with a valid hyphen-delimited filename summarizing this chat, e.g. 'refactor-api-layer'. Up to six words is acceptable. Do not output anything else. Do not add an extension. Do not perform tool calls or do further investigation.",
         },

@@ -55,7 +55,7 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
 
       if (part.message.tool_calls) {
         pushHistory(part.message);
-        toolCalls = part.message.tool_calls;
+        toolCalls = [...toolCalls, ...part.message.tool_calls];
       }
 
       if (part.message.content) {

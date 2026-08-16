@@ -41,6 +41,7 @@ export default async function prompt(): Promise<string | null> {
       output: process.stdout,
     });
     rl.on("SIGINT", () => {
+      log("\n");
       process.exit(0);
     });
 
