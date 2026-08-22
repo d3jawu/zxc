@@ -19,7 +19,7 @@ export async function chat() {
       type: t.type,
       function: t.function,
     })),
-    think: true,
+    think: config.model.startsWith("qwen3.8") ? "medium" : true,
     keep_alive: "20m",
   });
 }
