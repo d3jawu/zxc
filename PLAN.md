@@ -2,7 +2,20 @@
 
 ## Overview
 
-Replace the `ollama` SDK with a direct `fetch`-based client targeting the OpenAI-compatible `/v1` endpoint that llama.cpp exposes. Raw `fetch` keeps runtime dependencies minimal. For compile-time type safety, add `openai` as a dev dependency and use its types (`ChatCompletionMessageParam`, `ChatCompletionChunk`, `ChatCompletionMessageToolCall`, `Tool`, etc.) as the canonical shape definitions.
+Replace the `ollama` SDK with a direct `fetch`-based client targeting the OpenAI-compatible `/v1` endpoint that llama.cpp exposes. Raw `fetch` keeps runtime dependencies minimal. For compile-time type safety, add `openai` as a dev dependency and use its types (`ChatCompletionMessageParam`, `ChatCompletionChunk`, `ChatCompletionMessageToolCall`, `ChatCompletionTool`, etc.) as the canonical shape definitions.
+
+> **Type import caveat (openai v7.5.0):** The resource types are **not** top-level named exports. The package entry only re-exports the default `OpenAI` client plus a few core types; all resource shapes live inside the `OpenAI` namespace. Import the namespace and reference types through it — bare `import { ChatCompletionChunk } from "openai"` does **not** compile:
+>
+> ```ts
+> import { OpenAI } from "openai";
+> type Message = OpenAI.ChatCompletionMessageParam;
+> type ToolCall = OpenAI.ChatCompletionMessageToolCall;
+> type Chunk = OpenAI.ChatCompletionChunk;
+> // response body: OpenAI.ChatCompletion; model list: OpenAI.ModelList;
+> // tool shape:    OpenAI.ChatCompletionTool
+> ```
+>
+> There is **no `Tool` export** — the tool-definition shape is `OpenAI.ChatCompletionTool` (which already has the `{ type: "function", function: {...} }` structure used below).
 
 ---
 
@@ -17,7 +30,7 @@ Rename and rework. Export the same three functions plus types.
 ### `listModels(): Promise<string[]>`
 
 - `GET {baseUrl}/v1/models`
-- Parse response as `OpenAI.ModelList` (from `openai`), map `data[].id`.
+- Parse response as `OpenAI.ModelList`, map `data[].id`.
 - Same signature and behavior as before.
 - **Base URL resolution:** `listModels()` must resolve `baseUrl` directly from `process.env.LLAMA_BASE_URL ?? "http://localhost:8080"`, **not** from `config`. This is because `config.ts` calls `listModels()` at module-init time (see §2), before the `config` object exists — reading `config.baseUrl` there would be undefined and create a circular init dependency (`config` → `api` → `config`).
 
@@ -37,10 +50,11 @@ Rename and rework. Export the same three functions plus types.
   ```
 
 - Drop `keep_alive` — no equivalent in the OpenAI API spec. Drop `think` — Ollama-specific. Instead, handle `reasoning_content` in the response (see below).
-- Response: parse SSE stream. Each `data:` line is a JSON chunk typed as `ChatCompletionChunk` (from `openai`), augmented with an optional `reasoning_content` field on `delta`:
+- Response: parse SSE stream. Each `data:` line is a JSON chunk typed as `OpenAI.ChatCompletionChunk`, augmented with an  
+  optional `reasoning_content` field on `delta`:
 
   ```ts
-  interface ReasoningDelta extends ChatCompletionChunk.Choice.Delta {
+  interface ReasoningDelta extends OpenAI.ChatCompletionChunk.Choice.Delta {
     reasoning_content?: string;
   }
   ```
@@ -61,7 +75,7 @@ Rename and rework. Export the same three functions plus types.
 - Same logic as before: one non-streaming call, extract filename from response.
 - Implemented as its own inline `fetch` to `{baseUrl}/v1/chat/completions` with `stream: false`.
 - Request body: same shape as `chat()` minus `stream` and `stream_options`.
-- Response: parse the single JSON body as `ChatCompletion` (from `openai`), extract `choices[0].message.content`.
+- Response: parse the single JSON body as `OpenAI.ChatCompletion`, extract `choices[0].message.content`.
 - No reuse of the `chat()` function, which returns a streaming async iterable.
 
 ### `ps()` — dropped
@@ -98,17 +112,19 @@ Rename and rework. Export the same three functions plus types.
 ## 3. `src/history.ts`
 
 - **Message type**: replace `import type { Message } from "ollama"` with the OpenAI API type:
+
   ```ts
-  import type { ChatCompletionMessageParam } from "openai";
-  type Message = ChatCompletionMessageParam;
+  import { OpenAI } from "openai";
+  type Message = OpenAI.ChatCompletionMessageParam;
   ```
+
 - **Runtime import**: replace `const { summary } = await import("./ollama")` (line 17, inside `setHistoryFile`) with `const { summary } = await import("./api")`.
 
 - **Tool result messages**: change from `{ role: "tool", tool_name: "...", content: "..." }` to `{ role: "tool", tool_call_id: "...", content: "..." }`. The `tool_call_id` is the `id` field from the accumulated fragment — the one that arrived on the first chunk for that call's `index` (the `id` is optional per-fragment but always present on the first).
 - **`ToolCall` type**: use the OpenAI API type:
   ```ts
-  import type { ChatCompletionMessageToolCall } from "openai";
-  type ToolCall = ChatCompletionMessageToolCall;
+  import { OpenAI } from "openai";
+  type ToolCall = OpenAI.ChatCompletionMessageToolCall;
   ```
   Note: `arguments` is a JSON string in OpenAI (not an object). The agent loop will parse it.
 - **Clean break**: existing Ollama-format history files on disk will not load. No migration. `loadHistory` will fail on old files — acceptable.
@@ -118,10 +134,11 @@ Rename and rework. Export the same three functions plus types.
 
 ## 4. `src/agent.ts`
 
-- **Imports**: replace `ToolCall` import from `ollama` with the OpenAI type from `openai`.
+- **Imports**: replace `ToolCall` import from `ollama` with `import { OpenAI } from "openai"` and use `OpenAI.                
+ChatCompletionMessageToolCall` / `OpenAI.ChatCompletionChunk` (namespace types — see caveat above).
 - **Stream processing loop**: rewrite for OpenAI SSE format.
   - Parse `data: {...}` lines from the stream (split on `\n\n`, skip `data: [DONE]`).
-  - Each parsed chunk is typed as `ChatCompletionChunk` (from `openai`).
+  - Each parsed chunk is typed as `OpenAI.ChatCompletionChunk`.
   - **Guard before accessing `choices[0]`**: the final chunk (emitted because of `stream_options.include_usage`) has `choices: []`. Check `if (chunk.choices?.[0])` before reading `delta`; process the usage-only chunk in a separate branch.
   - In chunks with `choices[0]`:
     - Accumulate `delta.content` into `fullResponse`.
@@ -132,7 +149,7 @@ Rename and rework. Export the same three functions plus types.
   - On stream end, parse accumulated argument strings into objects.
 - **Tool call handling**: on stream end, the array of accumulated fragments **is** the `tool_calls` array — just fill in `type: "function"` on each entry. Push a **single** assistant message with the full `tool_calls` array to history (not per-chunk). Then for each call, push a `{ role: "tool", tool_call_id: id, content: result }` message, where `id` is the `id` field from that call's first fragment (the one that arrived with `index` 0, 1, 2, …). The OpenAI API requires `tool_call_id` on the result to match the `id` on the corresponding `tool_calls` entry, or it will reject the next request with a 400.
 - **Assistant tool-call message `content`**: when the assistant message carries `tool_calls`, it must have `content: null` (omitted). Do **not** attach the accumulated `fullResponse` text to a message that also has `tool_calls` — several OpenAI-compatible endpoints reject a subsequent request with 400 when a tool-call message has non-null/empty `content`. `fullResponse`/`content` is only used in the non-tool response branch (pushing the plain assistant message).
-- **`reasoning_content` handling**: in the SSE stream loop, check `chunk.choices[0].delta?.reasoning_content` in addition to `delta.content`. When present, yield a `"token"` event (same as text tokens). When absent, skip silently — no error, no config flag. No type augmentation needed at the runtime level (the field is simply undefined); at the type level, augment `ChatCompletionChunk.Choice.Delta` with an optional `reasoning_content?: string` for compile-time access.
+- **`reasoning_content` handling**: in the SSE stream loop, check `chunk.choices[0].delta?.reasoning_content` in addition to `delta.content`. When present, yield a `"token"` event (same as text tokens). When absent, skip silently — no error, no config flag. No type augmentation needed at the runtime level (the field is simply undefined); at the type level, augment `OpenAI.ChatCompletionChunk.Choice.Delta` with an optional `reasoning_content?: string` for compile-time access.
 - **Error handling**: the retry loop stays the same. Error message text changes from `"Ollama failed"` to `"Request failed"` (or similar).
 - **`AgentEvent` interface**: unchanged. The UI layer does not need to know the backend changed.
 - **`gotResponse` / `tool` loop logic**: unchanged structurally.
@@ -141,11 +158,17 @@ Rename and rework. Export the same three functions plus types.
 
 ## 5. `src/tools.ts`
 
-- **Type import**: replace `import type { Tool } from "ollama"` with the OpenAI type:
+- **Type import**: replace `import type { Tool } from "ollama"` with the OpenAI namespace type:
+
   ```ts
-  import type { Tool as OpenAITool } from "openai";
+  import { OpenAI } from "openai";
+  type ToolWithImplementation = OpenAI.ChatCompletionTool & {
+    /* run, etc. */
+  };
   ```
-  Use `OpenAITool` as the base type for `ToolWithImplementation`. The tool definition objects (`name`, `description`, `parameters`) already match the `function` field shape — no structural change needed.
+
+  There is no top-level `Tool` export — the tool-definition shape is `OpenAI.ChatCompletionTool`. It already has the `{ type: "function", function: { name, description, parameters } }` structure, so no structural change needed.
+
 - **Tool definitions**: already OpenAI-compatible. No changes to the actual tool logic.
 - **`run` signature**: `ToolCall.function.arguments` is a JSON string. Each tool's `run` receives parsed args. The agent loop handles `JSON.parse` before calling `run`. Keep passing objects to `run` — parse in the agent loop.
 
@@ -212,7 +235,7 @@ Rename and rework. Export the same three functions plus types.
 | `src/config.ts`    | Update import to `./api`, add `baseUrl` field                            |
 | `src/history.ts`   | Update import to `./api`, use `openai` types, `tool_call_id` format      |
 | `src/agent.ts`     | Rewrite stream loop for SSE, use `openai` types                          |
-| `src/tools.ts`     | Replace `Tool` type import with `openai` type                            |
+| `src/tools.ts`     | Replace `Tool` type import with `OpenAI.ChatCompletionTool`              |
 | `src/ui/prompt.ts` | Update import to `../api`, remove `ps` usage, drop context-length lookup |
 | `src/index.ts`     | No changes                                                               |
 | `package.json`     | Remove `ollama` dep, add `openai` dev dep                                |
