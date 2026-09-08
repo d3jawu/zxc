@@ -5,6 +5,7 @@ import {
   writeFileSync,
   unlinkSync,
 } from "fs";
+import { dirname } from "path";
 import { spawnSync } from "bun";
 import type { Tool } from "ollama";
 import chalk from "chalk";
@@ -160,9 +161,15 @@ const tools: ToolSet = {
         }
       }
 
-      writeFileSync(file, originalContent.replace(target, replacement), {
-        encoding: "utf-8",
-      });
+      try {
+        writeFileSync(file, originalContent.replace(target, replacement), {
+          encoding: "utf-8",
+        });
+      } catch (e) {
+        const errorString = e?.toString() || e;
+        log(`ERROR: ${errorString}`);
+        return `Error: ${errorString}`;
+      }
 
       const reason = denyReason();
       if (reason !== null) {
@@ -196,13 +203,24 @@ const tools: ToolSet = {
     },
     run: ({ file, contents }: WriteArgs) => {
       log(`${file}`);
+      const dir = dirname(file);
+      if (dir !== "." && dir !== "") {
+        const err = requirePath(dir, "directory");
+        if (err) return err;
+      }
       const originalContent = statSync(file, {
         throwIfNoEntry: false,
       })?.isFile()
         ? readFileSync(file, "utf-8")
         : null;
 
-      writeFileSync(file, contents, { encoding: "utf-8" });
+      try {
+        writeFileSync(file, contents, { encoding: "utf-8" });
+      } catch (e) {
+        const errorString = e?.toString() || e;
+        log(`ERROR: ${errorString}`);
+        return `Error: ${errorString}`;
+      }
 
       const reason = denyReason();
       if (reason !== null) {
@@ -265,7 +283,7 @@ const tools: ToolSet = {
             `${first10}\n\n${colors.white(`--- ${omitted} line(s) omitted ---`)}\n\n${last10}`,
           );
         } else {
-          log(output);
+          log(chalk.gray(output));
         }
 
         if (exitCode === 0) {
