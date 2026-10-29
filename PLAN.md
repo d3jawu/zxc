@@ -32,7 +32,7 @@ Rename and rework. Export the same three functions plus types.
 - `GET {baseUrl}/v1/models`
 - Parse response as `OpenAI.ModelList`, map `data[].id`.
 - Same signature and behavior as before.
-- **Base URL resolution:** `listModels()` must resolve `baseUrl` directly from `process.env.LLAMA_BASE_URL ?? "http://localhost:8080"`, **not** from `config`. This is because `config.ts` calls `listModels()` at module-init time (see §2), before the `config` object exists — reading `config.baseUrl` there would be undefined and create a circular init dependency (`config` → `api` → `config`).
+- **Base URL resolution:** `listModels()` must resolve `baseUrl` directly from `process.env.LLAMA_BASE_URL ?? "http://localhost:8000"`, **not** from `config`. This is because `config.ts` calls `listModels()` at module-init time (see §2), before the `config` object exists — reading `config.baseUrl` there would be undefined and create a circular init dependency (`config` → `api` → `config`).
 
 ### `chat()`
 
@@ -101,7 +101,7 @@ Rename and rework. Export the same three functions plus types.
 ## 2. `src/config.ts`
 
 - **Import**: replace `const { listModels } = await import("./ollama")` with `const { listModels } = await import("./api")`.
-- **Base URL**: add a `baseUrl` field to the `Config` type. Its default in `defaultConfig` must be the expression `process.env.LLAMA_BASE_URL ?? "http://localhost:8080"` — the same expression used in `listModels()` (§1). Both code paths must resolve to the identical value, otherwise a user who sets `LLAMA_BASE_URL` but omits `baseUrl` from `~/.zxc/zxc.json` would have `listModels()` talk to the env-var host while `chat()` / `summary()` silently fall back to `localhost:8080`. The `config`-file value (if present) overrides the default at the usual merge step.
+- **Base URL**: add a `baseUrl` field to the `Config` type. Its default in `defaultConfig` must be the expression `process.env.LLAMA_BASE_URL ?? "http://localhost:8000"` — the same expression used in `listModels()` (§1). Both code paths must resolve to the identical value, otherwise a user who sets `LLAMA_BASE_URL` but omits `baseUrl` from `~/.zxc/zxc.json` would have `listModels()` talk to the env-var host while `chat()` / `summary()` silently fall back to `localhost:8000`. The `config`-file value (if present) overrides the default at the usual merge step.
 - **API key**: not needed for llama.cpp. Omit the `Authorization` header entirely. No config field, no env var required.
 - **Default model**: call `listModels()` at init (same as before) and pick the first result. Note this runs **before** the `config` object is constructed, so `listModels()` must obtain `baseUrl` from `process.env.LLAMA_BASE_URL` / default itself (see §1) — it cannot read `config.baseUrl`. The `config.baseUrl` field is only used by later request paths (`chat`, `summary`) after config exists.
 - **`systemPrompt`**: unchanged.
@@ -215,7 +215,7 @@ ChatCompletionMessageToolCall` / `OpenAI.ChatCompletionChunk` (namespace types �
 | `tool_name` in msgs  | `tool_call_id` in msgs                            | Change format                      |
 | Tool call args       | JSON string (accumulated in stream)               | Parse in agent loop                |
 | API key              | Not needed (llama.cpp)                            | Omit                               |
-| Base URL             | `http://localhost:8080` default                   | Add to config                      |
+| Base URL             | `http://localhost:8000` default                   | Add to config                      |
 
 ---
 

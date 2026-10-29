@@ -1,6 +1,6 @@
-import type { ToolCall } from "ollama";
+import { OpenAI } from "openai";
 import { pushHistory, setHistoryFile } from "./history";
-import { chat } from "./ollama";
+import { chat } from "./api";
 import type { ToolName } from "./tools";
 import toolset from "./tools";
 import prompt from "./ui/prompt";
@@ -14,8 +14,13 @@ export type AgentEvent =
   | { type: "response"; text: string }
   | { type: "error"; message: string };
 
+type AccumulatedToolCall = {
+  id: string;
+  name: string;
+  arguments: string;
+};
+
 export default async function* run(): AsyncGenerator<AgentEvent> {
-  // Whether to loop again for a tool call.
   let tool = false;
   let gotResponse = true;
 
@@ -37,30 +42,39 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
         response = await chat();
         break;
       } catch (e) {
-        yield { type: "error", message: `Ollama failed, retrying.\n${e}` };
+        yield { type: "error", message: `Request failed, retrying.\n${e}` };
       }
     }
 
     let fullResponse = "";
     tool = false;
-    let toolCalls: ToolCall[] = [];
+    const toolCallAccum: AccumulatedToolCall[] = [];
+
     for await (const part of response) {
       if (part.prompt_eval_count !== undefined) {
         yield { type: "context", count: part.prompt_eval_count };
       }
 
-      if (part.message.thinking) {
+      if (part.content) {
+        fullResponse += part.content;
         yield { type: "token" };
       }
 
-      if (part.message.tool_calls) {
-        pushHistory(part.message);
-        toolCalls = [...toolCalls, ...part.message.tool_calls];
-      }
-
-      if (part.message.content) {
-        fullResponse += part.message.content;
-        yield { type: "token" };
+      if (part.tool_calls) {
+        for (const tc of part.tool_calls) {
+          const idx = tc.index;
+          if (!toolCallAccum[idx]) {
+            toolCallAccum[idx] = {
+              id: tc.id || `call_${Date.now()}_${idx}`,
+              name: tc.function.name || "",
+              arguments: "",
+            };
+          }
+          const acc = toolCallAccum[idx];
+          if (tc.id) acc.id = tc.id;
+          if (tc.function.name) acc.name = tc.function.name;
+          acc.arguments += tc.function.arguments || "";
+        }
       }
     }
 
@@ -69,32 +83,52 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
       gotResponse = true;
       yield { type: "response", text: fullResponse };
 
-      // Intentional fire-and-forget here
       setHistoryFile();
     }
 
-    for (const toolCall of toolCalls) {
+    if (toolCallAccum.some((x) => x !== undefined)) {
       tool = true;
-      const toolDef = toolset[toolCall.function.name as ToolName];
-      if (!toolDef) {
-        yield {
-          type: "error",
-          message: `Attempted to call invalid tool: ${toolCall.function.name}`,
-        };
+      const toolCalls: OpenAI.ChatCompletionMessageToolCall[] = toolCallAccum
+        .filter((x) => x !== undefined)
+        .map((tc) => ({
+          id: tc.id,
+          type: "function" as const,
+          function: {
+            name: tc.name,
+            arguments: JSON.stringify(JSON.parse(tc.arguments || "{}")),
+          },
+        })) as OpenAI.ChatCompletionMessageToolCall[];
+
+      pushHistory({
+        role: "assistant",
+        content: null,
+        tool_calls: toolCalls,
+      });
+
+      for (const toolCall of toolCalls) {
+        if (toolCall.type !== "function") continue;
+        const toolDef = toolset[toolCall.function.name as ToolName];
+        if (!toolDef) {
+          yield {
+            type: "error",
+            message: `Attempted to call invalid tool: ${toolCall.function.name}`,
+          };
+          pushHistory({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `Invalid tool: ${toolCall.function.name}`,
+          });
+          continue;
+        }
+        yield { type: "tool", tool: toolCall.function.name as ToolName };
+        const parsedArgs = JSON.parse(toolCall.function.arguments);
+        const toolResponse = await toolDef.run(parsedArgs);
         pushHistory({
           role: "tool",
-          tool_name: toolCall.function.name,
-          content: `Invalid tool: ${toolCall.function.name}`,
+          tool_call_id: toolCall.id,
+          content: toolResponse,
         });
-        continue;
       }
-      yield { type: "tool", tool: toolCall.function.name as ToolName };
-      const toolResponse = await toolDef.run(toolCall.function.arguments);
-      pushHistory({
-        role: "tool",
-        tool_name: toolCall.function.name,
-        content: toolResponse,
-      });
     }
   }
 }

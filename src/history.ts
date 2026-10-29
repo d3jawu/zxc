@@ -1,8 +1,12 @@
-import type { Message } from "ollama";
+import { OpenAI } from "openai";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { log } from "./ui/output";
 import config, { configDir } from "./config";
+
+type Message = OpenAI.ChatCompletionMessageParam;
+
+export type ToolCall = OpenAI.ChatCompletionMessageToolCall;
 
 let history: Message[] = [];
 
@@ -13,7 +17,7 @@ export async function setHistoryFile() {
     return;
   }
 
-  const { summary } = await import("./ollama");
+  const { summary } = await import("./api");
   const slug = await summary();
 
   historyFile = join(configDir, `history-${Date.now()}-${slug}.json`);

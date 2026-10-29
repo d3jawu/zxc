@@ -7,7 +7,7 @@ import {
 } from "fs";
 import { dirname } from "path";
 import { spawnSync } from "bun";
-import type { Tool } from "ollama";
+import { OpenAI } from "openai";
 import chalk from "chalk";
 import glow from "./ui/glow";
 import { log, write } from "./ui/output";
@@ -23,9 +23,10 @@ export type EditArgs = { file: string; target: string; replacement: string };
 export type WriteArgs = { file: string; contents: string };
 export type BashArgs = { command: string };
 
-export type ToolWithImplementation<T = any> = Tool & {
-  run: (args: T) => string | Promise<string>;
-};
+export type ToolWithImplementation<T = any> =
+  OpenAI.ChatCompletionFunctionTool & {
+    run: (args: T) => string | Promise<string>;
+  };
 
 function denyReason(): string | null {
   process.stdout.write("\u0007");

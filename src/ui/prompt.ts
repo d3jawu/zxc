@@ -1,4 +1,4 @@
-import { ps as ops, listModels } from "../ollama";
+import { listModels } from "../api";
 import { userInfo } from "os";
 import readline from "readline/promises";
 import { loadHistory } from "../history";
@@ -18,22 +18,7 @@ export const setContextUsed = (val: number) => {
 
 export default async function prompt(): Promise<string | null> {
   section();
-  let contextLength: number | undefined;
-  const ps = await ops();
-  const foundModel = ps.models.find(({ model: m }) => m === config.model);
-  if (
-    foundModel &&
-    "context_length" in foundModel &&
-    typeof foundModel.context_length === "number"
-  ) {
-    contextLength = foundModel.context_length;
-  }
-  const contextString = !contextLength
-    ? "--"
-    : (parseFloat((contextUsed / contextLength).toFixed(3)) * 100).toFixed(1) +
-      "%, " +
-      (contextUsed / 1000).toFixed(1) +
-      "k";
+  const contextString = "--";
 
   while (true) {
     const rl = readline.createInterface({
