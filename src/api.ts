@@ -12,6 +12,7 @@ interface ReasoningDelta extends OpenAI.ChatCompletionChunk.Choice.Delta {
 export type ChatEvent = {
   prompt_eval_count?: number;
   content?: string;
+  reasoning?: string;
   tool_calls?: Array<{
     index: number;
     id?: string;
@@ -20,7 +21,7 @@ export type ChatEvent = {
 };
 
 export async function listModels(): Promise<string[]> {
-  const baseUrl = process.env.LLAMA_BASE_URL ?? "http://localhost:8000";
+  const baseUrl = process.env.LLAMA_BASE_URL ?? "http://localhost:47831";
   const res = await fetch(`${baseUrl}/v1/models`);
   const data = (await res.json()) as { data: OpenAI.Model[] };
   return data.data.map((m) => m.id);
@@ -28,7 +29,7 @@ export async function listModels(): Promise<string[]> {
 
 export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
   const baseUrl =
-    config.baseUrl ?? process.env.LLAMA_BASE_URL ?? "http://localhost:8000";
+    config.baseUrl ?? process.env.LLAMA_BASE_URL ?? "http://localhost:47831";
 
   const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
@@ -82,7 +83,8 @@ export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
 
             if (content || reasoning || toolCalls) {
               yield {
-                content: (content ?? "") + (reasoning ?? ""),
+                content: content || undefined,
+                reasoning,
                 tool_calls: toolCalls?.map((tc) => ({
                   index: tc.index,
                   id: tc.id,

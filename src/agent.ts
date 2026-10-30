@@ -60,6 +60,10 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
         yield { type: "token" };
       }
 
+      if (part.reasoning) {
+        yield { type: "token" };
+      }
+
       if (part.tool_calls) {
         for (const tc of part.tool_calls) {
           const idx = tc.index;
