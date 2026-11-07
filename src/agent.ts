@@ -82,7 +82,7 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
       }
     }
 
-    if (fullResponse) {
+    if (fullResponse.trim()) {
       pushHistory({ role: "assistant", content: fullResponse });
       gotResponse = true;
       yield { type: "response", text: fullResponse };
