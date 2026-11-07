@@ -54,55 +54,60 @@ export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
   const decoder = new TextDecoder();
   let buffer = "";
 
+  function* processLines(flush = false): Generator<ChatEvent> {
+    const lines = buffer.split("\n");
+    buffer = flush ? "" : (lines.pop() ?? "");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data:")) continue;
+      const json = trimmed.slice(5).trim();
+      if (json === "[DONE]") continue;
+
+      const chunk: OpenAI.ChatCompletionChunk & {
+        choices?: Array<
+          OpenAI.ChatCompletionChunk.Choice & { delta?: ReasoningDelta }
+        >;
+        usage?: OpenAI.CompletionUsage;
+      } = JSON.parse(json);
+
+      if (chunk.choices && chunk.choices[0]) {
+        const delta = chunk.choices[0].delta as ReasoningDelta | undefined;
+        if (delta) {
+          const content = delta.content;
+          const reasoning = delta.reasoning_content;
+          const toolCalls = delta.tool_calls;
+
+          if (content || reasoning || toolCalls) {
+            yield {
+              content: content || undefined,
+              reasoning,
+              tool_calls: toolCalls?.map((tc) => ({
+                index: tc.index,
+                id: tc.id,
+                function: {
+                  name: tc.function?.name,
+                  arguments: tc.function?.arguments,
+                },
+              })),
+            };
+          }
+        }
+      }
+
+      if (chunk.usage) {
+        yield { prompt_eval_count: chunk.usage.prompt_tokens };
+      }
+    }
+  }
+
   async function* stream(): AsyncGenerator<ChatEvent> {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data:")) continue;
-        const json = trimmed.slice(5).trim();
-        if (json === "[DONE]") continue;
-
-        const chunk: OpenAI.ChatCompletionChunk & {
-          choices?: Array<
-            OpenAI.ChatCompletionChunk.Choice & { delta?: ReasoningDelta }
-          >;
-          usage?: OpenAI.CompletionUsage;
-        } = JSON.parse(json);
-
-        if (chunk.choices && chunk.choices[0]) {
-          const delta = chunk.choices[0].delta as ReasoningDelta | undefined;
-          if (delta) {
-            const content = delta.content;
-            const reasoning = delta.reasoning_content;
-            const toolCalls = delta.tool_calls;
-
-            if (content || reasoning || toolCalls) {
-              yield {
-                content: content || undefined,
-                reasoning,
-                tool_calls: toolCalls?.map((tc) => ({
-                  index: tc.index,
-                  id: tc.id,
-                  function: {
-                    name: tc.function?.name,
-                    arguments: tc.function?.arguments,
-                  },
-                })),
-              };
-            }
-          }
-        }
-
-        if (chunk.usage) {
-          yield { prompt_eval_count: chunk.usage.prompt_tokens };
-        }
-      }
+      yield* processLines();
     }
+    yield* processLines(true);
   }
 
   return stream();
