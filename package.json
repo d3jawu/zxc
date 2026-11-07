@@ -12,7 +12,7 @@
   "devDependencies": {
     "@types/ansi-escape-sequences": "^4.0.4",
     "@types/bun": "latest",
-    "openai": "^4.0.0"
+    "openai": "^7.5.0"
   },
   "peerDependencies": {
     "typescript": "^5"
