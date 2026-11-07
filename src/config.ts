@@ -1,23 +1,25 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+
 type Config = {
   model: string;
   systemPrompt: string;
+  baseUrl: string;
 };
 
-const { listModels } = await import("./ollama");
+const { listModels } = await import("./api");
 
 const defaultConfig: Config = {
   model: (await listModels())[0] || "",
   systemPrompt: `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 Your context window is small, so you must be as concise as possible in both thinking and responding.
 Available tools:
-   - read: Read file contents
-   - list: List files in directory
-   - edit: Replace text to changes to an existing file
-   - write: Create or overwrite a file
-   - bash: Execute commands
+    - read: Read file contents
+    - list: List files in directory
+    - edit: Replace text to changes in an existing file
+    - write: Create or overwrite a file
+    - bash: Execute commands
 Tool calls that fail will respond with a message that begins with "Error:" followed by the reason.
 
 Guidelines:
@@ -32,6 +34,7 @@ Guidelines:
 - Work in the current directory, do not cd into others
 - When suggesting fixes, stop and ask the user first before implementing
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`,
+  baseUrl: process.env.LLAMA_BASE_URL ?? "http://localhost:8000",
 };
 
 export const configDir = path.join(os.homedir(), ".zxc");
