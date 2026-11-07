@@ -38,7 +38,7 @@ function denyReason(): string | null {
 
 const requirePath = (path: string, type: "file" | "directory") => {
   if (!path) {
-    log(`${chalk.white.bgRed("ERROR")} Attempted to read empty path.`);
+    log(`${chalk.white.bgRed("ERROR")} Attempted to access empty path.`);
     return `Path is empty.`;
   }
   const stat = statSync(path, { throwIfNoEntry: false });

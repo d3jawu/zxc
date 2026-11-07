@@ -6,8 +6,6 @@ import config, { configDir } from "./config";
 
 type Message = OpenAI.ChatCompletionMessageParam;
 
-export type ToolCall = OpenAI.ChatCompletionMessageToolCall;
-
 let history: Message[] = [];
 
 export let historyFile: undefined | string = undefined;
