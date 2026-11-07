@@ -1,4 +1,4 @@
-import { OpenAI } from "openai";
+import type { OpenAI } from "openai";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { log } from "./ui/output";

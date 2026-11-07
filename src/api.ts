@@ -1,7 +1,7 @@
 import config from "./config";
 import { getHistory } from "./history";
 import tools from "./tools";
-import { OpenAI } from "openai";
+import type { OpenAI } from "openai";
 
 type Message = OpenAI.ChatCompletionMessageParam;
 

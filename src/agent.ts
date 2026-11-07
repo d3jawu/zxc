@@ -1,4 +1,4 @@
-import { OpenAI } from "openai";
+import type { OpenAI } from "openai";
 import { pushHistory, setHistoryFile } from "./history";
 import { chat } from "./api";
 import type { ToolName } from "./tools";

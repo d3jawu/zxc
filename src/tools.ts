@@ -7,7 +7,7 @@ import {
 } from "fs";
 import { dirname } from "path";
 import { spawnSync } from "bun";
-import { OpenAI } from "openai";
+import type { OpenAI } from "openai";
 import chalk from "chalk";
 import glow from "./ui/glow";
 import { log, write } from "./ui/output";
