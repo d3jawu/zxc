@@ -11,7 +11,13 @@ if (config.models.length === 0) {
   await addModel();
 }
 
-log(`Using model ${colors.blue(getModel().model)}.`);
+const active = getModel();
+if (!active) {
+  log("No model configured. Exiting.");
+  process.exit(1);
+}
+
+log(`Using model ${colors.blue(active.model)}.`);
 
 const agent = run();
 

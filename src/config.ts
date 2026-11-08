@@ -67,8 +67,8 @@ export const setModel = (model: number) => {
   activeModel = model;
 };
 
-export const getModel = (): ModelConfig => {
-  return config.models[activeModel]!;
+export const getModel = (): ModelConfig | undefined => {
+  return config.models[activeModel];
 };
 
 export default config;

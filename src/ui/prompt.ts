@@ -71,14 +71,15 @@ export async function addModel(): Promise<void> {
 }
 
 async function switchModel(): Promise<void> {
-  if (config.models.length === 0) {
-    log("No models configured. Use /model add to configure one.");
+  const current = getModel();
+  if (!current) {
+    log("No model configured. Use /model add to configure one.");
     return;
   }
   let index: number;
   try {
     index = await select({
-      message: `Select a model (currently using ${colors.blue(getModel().model)})`,
+      message: `Select a model (currently using ${colors.blue(current.model)})`,
       choices: config.models.map((m, i) => ({
         name: `${m.model} (${m.baseUrl})`,
         value: i,
