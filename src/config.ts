@@ -4,6 +4,7 @@ import * as path from "path";
 
 type Config = {
   models: ModelConfig[];
+  activeModel: number;
   systemPrompt: string;
 };
 
@@ -37,6 +38,7 @@ Guidelines:
 - When suggesting fixes, stop and ask the user first before implementing
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`,
   models: [],
+  activeModel: 0,
 };
 
 export const configDir = path.join(os.homedir(), ".zxc");
@@ -62,13 +64,20 @@ export const setConfig = <K extends keyof Config>(key: K, val: Config[K]) => {
   fs.writeFileSync(configPath, JSON.stringify(config));
 };
 
-let activeModel = 0;
+if (
+  !Number.isInteger(config.activeModel) ||
+  config.activeModel < 0 ||
+  config.activeModel >= config.models.length
+) {
+  setConfig("activeModel", 0);
+}
+
 export const setModel = (model: number) => {
-  activeModel = model;
+  setConfig("activeModel", model);
 };
 
 export const getModel = (): ModelConfig | undefined => {
-  return config.models[activeModel];
+  return config.models[config.activeModel];
 };
 
 export default config;
