@@ -3,15 +3,17 @@ import * as os from "os";
 import * as path from "path";
 
 type Config = {
-  model: string;
+  models: ModelConfig[];
   systemPrompt: string;
-  baseUrl: string;
 };
 
-const { listModels } = await import("./api");
+type ModelConfig = {
+  baseUrl: string;
+  model: string;
+  apiKey: string;
+};
 
 const defaultConfig: Config = {
-  model: (await listModels())[0] || "",
   systemPrompt: `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 Your context window is small, so you must be as concise as possible in both thinking and responding.
 Available tools:
@@ -34,7 +36,7 @@ Guidelines:
 - Work in the current directory, do not cd into others
 - When suggesting fixes, stop and ask the user first before implementing
 - If a user request is unclear, stop and ask for clarification instead of guessing or assuming what is expected`,
-  baseUrl: process.env.LLAMA_BASE_URL ?? "http://localhost:8000",
+  models: [],
 };
 
 export const configDir = path.join(os.homedir(), ".zxc");
@@ -58,6 +60,15 @@ const config: Config = {
 export const setConfig = <K extends keyof Config>(key: K, val: Config[K]) => {
   config[key] = val;
   fs.writeFileSync(configPath, JSON.stringify(config));
+};
+
+let activeModel = 0;
+export const setModel = (model: number) => {
+  activeModel = model;
+};
+
+export const getModel = (): ModelConfig => {
+  return config.models[activeModel]!;
 };
 
 export default config;
