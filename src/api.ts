@@ -1,4 +1,4 @@
-import config from "./config";
+import { getModel } from "./config";
 import { getHistory } from "./history";
 import tools from "./tools";
 import type { OpenAI } from "openai";
@@ -20,22 +20,21 @@ export type ChatEvent = {
   }>;
 };
 
-export async function listModels(): Promise<string[]> {
-  const baseUrl = process.env.LLAMA_BASE_URL ?? "http://localhost:47831";
-  const res = await fetch(`${baseUrl}/v1/models`);
-  const data = (await res.json()) as { data: OpenAI.Model[] };
-  return data.data.map((m) => m.id);
-}
-
 export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
-  const baseUrl =
-    config.baseUrl ?? process.env.LLAMA_BASE_URL ?? "http://localhost:47831";
+  const active = getModel();
+  if (!active) {
+    throw new Error("No model configured. Use /model add to configure one.");
+  }
+  const { baseUrl, model, apiKey } = active;
 
   const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      model: config.model,
+      model,
       messages: getHistory() as Message[],
       tools: Object.values(tools).map((t) => ({
         type: t.type,
@@ -45,6 +44,12 @@ export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
       stream_options: { include_usage: true },
     }),
   });
+
+  if (!res.ok) {
+    throw new Error(
+      `Request failed: ${res.status} ${res.statusText}\n${await res.text()}`,
+    );
+  }
 
   if (!res.body) {
     throw new Error("No response body");
@@ -114,14 +119,20 @@ export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
 }
 
 export async function summary(): Promise<string> {
-  const baseUrl =
-    config.baseUrl ?? process.env.LLAMA_BASE_URL ?? "http://localhost:8000";
+  const active = getModel();
+  if (!active) {
+    throw new Error("No model configured. Use /model add to configure one.");
+  }
+  const { baseUrl, model, apiKey } = active;
 
   const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      model: config.model,
+      model,
       messages: [
         ...(getHistory() as Message[]),
         {
@@ -133,6 +144,12 @@ export async function summary(): Promise<string> {
       stream: false,
     }),
   });
+
+  if (!res.ok) {
+    throw new Error(
+      `Request failed: ${res.status} ${res.statusText}\n${await res.text()}`,
+    );
+  }
 
   const body = (await res.json()) as OpenAI.ChatCompletion;
   const raw = body.choices[0]?.message.content ?? "";

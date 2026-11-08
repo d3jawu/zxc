@@ -32,7 +32,7 @@ const summary = () => {
     `${ansi.cursor.back(1000)}${colors.blue("model(")}${colors.gray("thinking")}${colors.blue(")")}: ` +
     `${color(elapsed.toFixed(0))}${colors.gray("s")}` +
     (counts.token
-      ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens`)}`
+      ? `${colors.gray(",")} ${counts.token} ${colors.gray(`tokens (`)}${(counts.token / elapsed).toFixed(1)} ${colors.gray(`tok/s)`)}`
       : "") +
     (counts.read
       ? `${colors.gray(",")} ${colors.pink("read")} ${counts.read} ${colors.gray("file(s)")}`
