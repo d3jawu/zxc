@@ -45,6 +45,12 @@ export async function chat(): Promise<AsyncGenerator<ChatEvent>> {
     }),
   });
 
+  if (!res.ok) {
+    throw new Error(
+      `Request failed: ${res.status} ${res.statusText}\n${await res.text()}`,
+    );
+  }
+
   if (!res.body) {
     throw new Error("No response body");
   }
@@ -138,6 +144,12 @@ export async function summary(): Promise<string> {
       stream: false,
     }),
   });
+
+  if (!res.ok) {
+    throw new Error(
+      `Request failed: ${res.status} ${res.statusText}\n${await res.text()}`,
+    );
+  }
 
   const body = (await res.json()) as OpenAI.ChatCompletion;
   const raw = body.choices[0]?.message.content ?? "";
