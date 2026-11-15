@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import run from "./agent";
-import { log, write } from "./ui/output";
+import { log } from "./ui/output";
 import { trigger } from "./ui/ui";
 import config, { getModel } from "./config";
 import colors from "./ui/colors";
@@ -17,7 +17,9 @@ if (!active) {
   process.exit(1);
 }
 
-log(`Using model ${colors.blue(active.model)}.`);
+log(
+  `Using model ${colors.blue(active.model)} via ${colors.blue(active.baseUrl)}.`,
+);
 
 const agent = run();
 
