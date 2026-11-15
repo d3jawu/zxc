@@ -125,7 +125,17 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
           continue;
         }
         yield { type: "tool", tool: toolCall.function.name as ToolName };
-        const parsedArgs = JSON.parse(toolCall.function.arguments);
+        let parsedArgs: unknown;
+        try {
+          parsedArgs = JSON.parse(toolCall.function.arguments);
+        } catch (e) {
+          pushHistory({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `Error: failed to parse tool call arguments.\n${e}`,
+          });
+          continue;
+        }
         const toolResponse = await toolDef.run(parsedArgs);
         pushHistory({
           role: "tool",
