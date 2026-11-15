@@ -37,13 +37,13 @@ export default async function* run(): AsyncGenerator<AgentEvent> {
 
     yield { type: "start" };
     let response;
-    while (true) {
-      try {
-        response = await chat();
-        break;
-      } catch (e) {
-        yield { type: "error", message: `Request failed, retrying.\n${e}` };
-      }
+    try {
+      response = await chat();
+    } catch (e) {
+      yield { type: "error", message: `Request failed.\n${e}` };
+      tool = false;
+      gotResponse = true;
+      continue;
     }
 
     let fullResponse = "";
