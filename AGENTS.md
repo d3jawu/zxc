@@ -45,9 +45,10 @@ src/
   - `edit` — replace the first exact-match occurrence of a string; on a mismatch it shows a diff and offers to perform the edit by hand
   - `write` — create or overwrite a file; parent directory must exist
   - `bash` — run a shell command via `bash -c`; output is truncated to first/last 10 lines past 20 lines
-- **User confirmations**: `edit`, `write`, and `bash` ask the user to confirm after the operation (or before, for `bash`); denying with a reason rolls back file changes and feeds the reason back to the model.
-- **Config** (`~/.zxc/zxc.json`): `models` (array of `{ baseUrl, model, apiKey }`), `activeModel` (index into `models`), `systemPrompt`. On first run with no models, the app walks the user through configuring one (`/model add`): base URL, API key, and a pick from `/v1/models`. The selection is persisted and restored on the next run.
-- **Slash commands**: `/model` switches between saved models; `/model add` configures a new one; `/resume` loads a saved history file from `~/.zxc`.
+- **Sandbox**: `read`, `list`, `edit`, and `write` refuse paths that resolve outside the current working directory, following symlinks to their real target before deciding. There is no path sandbox on `bash` — its pre-run confirmation is the only gate.
+- **User confirmations**: `edit`, `write`, and `bash` ask the user to confirm after the operation (or before, for `bash`); denying with a reason rolls back file changes and feeds the reason back to the model. For untrusted models, `bash` asks again after the command runs whether its output may be shared with the model; denying withholds the output (the command has already run) and feeds the denial reason back to the model.
+- **Config** (`~/.zxc/zxc.json`): `models` (array of `{ baseUrl, model, apiKey, trusted }`), `activeModel` (index into `models`), `systemPrompt`. On first run with no models, the app walks the user through configuring one (`/model add`): base URL, API key, and a pick from `/v1/models`. The selection is persisted and restored on the next run.
+- **Slash commands**: `/model` switches between saved models; `/model add` configures a new one (base URL, API key, a pick from `/v1/models`, and whether to trust it); `/resume` loads a saved history file from `~/.zxc`.
 - **System prompt**: Defines agent behavior and tool-usage guidelines; sent as the first message of every conversation.
 
 ## Development Guidelines

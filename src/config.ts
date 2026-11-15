@@ -12,6 +12,7 @@ type ModelConfig = {
   baseUrl: string;
   model: string;
   apiKey: string;
+  trusted: boolean;
 };
 
 const defaultConfig: Config = {
@@ -57,6 +58,10 @@ const loadedConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 const config: Config = {
   ...defaultConfig,
   ...loadedConfig,
+  models: loadedConfig.models?.map((m: ModelConfig) => ({
+    ...m,
+    trusted: m.trusted ?? false,
+  })) ?? [],
 };
 
 export const setConfig = <K extends keyof Config>(key: K, val: Config[K]) => {

@@ -1,17 +1,19 @@
 import {
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
   writeFileSync,
   unlinkSync,
 } from "fs";
-import { dirname } from "path";
+import { dirname, resolve, sep } from "path";
 import { spawnSync } from "bun";
 import type { OpenAI } from "openai";
 import chalk from "chalk";
 import glow from "./ui/glow";
 import { log, write } from "./ui/output";
 import colors from "./ui/colors";
+import { getModel } from "./config";
 
 export type ToolName = "read" | "list" | "edit" | "write" | "bash";
 
@@ -28,13 +30,39 @@ export type ToolWithImplementation<T = any> =
     run: (args: T) => string | Promise<string>;
   };
 
-function denyReason(): string | null {
+const denyReason = (message?: string): string | null => {
   process.stdout.write("\u0007");
   const input = prompt(
-    `${colors.green("Confirm")} (↵) or ${colors.red("deny")} (give reason):`,
+    `${colors.green(message ?? "Confirm")} (↵) or ${colors.red("deny")} (give reason):`,
   );
   return input?.trim() || null;
-}
+};
+
+const assertInsideCwd = (path: string): string | null => {
+  const cwd = process.cwd();
+  const resolved = resolve(cwd, path);
+  const inCwd =
+    resolved === cwd || resolved.startsWith(cwd + sep);
+  let real: string | undefined;
+  if (inCwd) {
+    try {
+      real = realpathSync(resolved);
+    } catch {
+      real = resolved;
+    }
+  }
+  if (
+    inCwd &&
+    real !== undefined &&
+    (real === cwd || real.startsWith(cwd + sep))
+  ) {
+    return null;
+  }
+  log(
+    `${chalk.white.bgRed("ERROR")} ${path} is outside of the current working directory.`,
+  );
+  return `Error: "${path}" is outside of the current working directory.`;
+};
 
 const requirePath = (path: string, type: "file" | "directory") => {
   if (!path) {
@@ -70,6 +98,8 @@ const tools: ToolSet = {
       },
     },
     run: ({ file }: ReadArgs) => {
+      const sandboxErr = assertInsideCwd(file);
+      if (sandboxErr) return sandboxErr;
       const err = requirePath(file, "file");
       if (err) return err;
       return readFileSync(file, "utf-8");
@@ -93,6 +123,8 @@ const tools: ToolSet = {
     },
     run: ({ path }: ListArgs) => {
       const resolvedPath = path ?? process.cwd();
+      const sandboxErr = assertInsideCwd(resolvedPath);
+      if (sandboxErr) return sandboxErr;
       const err = requirePath(resolvedPath, "directory");
       if (err) return err;
       return readdirSync(resolvedPath).join("\n");
@@ -126,6 +158,8 @@ const tools: ToolSet = {
     },
     run: ({ file, target: targetText, replacement }: EditArgs) => {
       log(`${file}`);
+      const sandboxErr = assertInsideCwd(file);
+      if (sandboxErr) return sandboxErr;
       const err = requirePath(file, "file");
       if (err) return err;
 
@@ -208,6 +242,8 @@ const tools: ToolSet = {
     },
     run: ({ file, contents }: WriteArgs) => {
       log(`${file}`);
+      const sandboxErr = assertInsideCwd(file);
+      if (sandboxErr) return sandboxErr;
       const dir = dirname(file);
       if (dir !== "." && dir !== "") {
         const err = requirePath(dir, "directory");
@@ -260,11 +296,12 @@ const tools: ToolSet = {
     run: ({ command }: BashArgs) => {
       log(`${command}`);
 
-      const reason = denyReason();
+      const reason = denyReason("Run this command");
       if (reason !== null) {
         return `Error: Bash operation denied by user because: ${reason}`;
       }
 
+      let result: string;
       try {
         const proc = spawnSync({
           cmd: ["bash", "-c", command],
@@ -291,17 +328,31 @@ const tools: ToolSet = {
           log(chalk.gray(output));
         }
 
-        if (exitCode === 0) {
-          return output;
+        if (exitCode !== 0) {
+          write(chalk.gray(error || output));
+          result = `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
+        } else {
+          result = output;
         }
-
-        write(chalk.gray(error || output));
-        return `Error: Command failed with exit code ${exitCode}.\n${error || output}`;
       } catch (e) {
         log(String(e));
         log(JSON.stringify(e));
-        return `Error: Bash operation failed: ${e}`;
+        result = `Error: Bash operation failed: ${e}`;
       }
+
+      const trusted = getModel()?.trusted;
+      if (!trusted) {
+        const reason = denyReason("Share this output with the model");
+        if (reason !== null) {
+          write(
+            colors.yellow(
+              "Output withheld from the model; the command already ran.",
+            ),
+          );
+          return `Error: Bash output withheld by user because: ${reason}`;
+        }
+      }
+      return result;
     },
   },
 };

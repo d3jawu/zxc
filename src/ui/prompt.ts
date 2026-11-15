@@ -7,7 +7,7 @@ import { configDir } from "../config";
 import { log, section, reset } from "./output";
 import colors from "./colors";
 import config, { setConfig, setModel, getModel } from "../config";
-import { input, password, select } from "@inquirer/prompts";
+import { input, password, select, confirm } from "@inquirer/prompts";
 
 let contextUsed = 0;
 
@@ -62,12 +62,24 @@ export async function addModel(): Promise<void> {
   } catch {
     return;
   }
+  let trusted: boolean;
+  try {
+    trusted = await confirm({
+      message: `Trust ${selectedModel}? Untrusted models will ask before sharing command output`,
+      default: false,
+      theme: selectTheme,
+    });
+  } catch {
+    return;
+  }
   setConfig("models", [
     ...config.models,
-    { baseUrl, model: selectedModel, apiKey },
+    { baseUrl, model: selectedModel, apiKey, trusted },
   ]);
   setModel(config.models.length - 1);
-  log(`Model set to ${colors.blue(selectedModel)} at ${colors.blue(baseUrl)}.`);
+  log(
+    `Model set to ${colors.blue(selectedModel)} at ${colors.blue(baseUrl)} (${trusted ? colors.green("trusted") : colors.yellow("untrusted")}).`,
+  );
 }
 
 async function switchModel(): Promise<void> {
@@ -81,7 +93,7 @@ async function switchModel(): Promise<void> {
     index = await select({
       message: `Select a model (currently using ${colors.blue(current.model)})`,
       choices: config.models.map((m, i) => ({
-        name: `${m.model} (${m.baseUrl})`,
+        name: `${m.model} (${m.baseUrl})${m.trusted ? " (trusted)" : " (untrusted)"}`,
         value: i,
       })),
       theme: selectTheme,
@@ -91,7 +103,9 @@ async function switchModel(): Promise<void> {
   }
   const active = config.models[index]!;
   setModel(index);
-  log(`Model set to ${colors.blue(active.model)}.`);
+  log(
+    `Model set to ${colors.blue(active.model)} (${active.trusted ? colors.green("trusted") : colors.yellow("untrusted")}).`,
+  );
 }
 
 export default async function prompt(): Promise<string | null> {

@@ -18,7 +18,7 @@ if (!active) {
 }
 
 log(
-  `Using model ${colors.blue(active.model)} via ${colors.blue(active.baseUrl)}.`,
+  `Using model ${colors.blue(active.model)} via ${colors.blue(active.baseUrl)} (${active.trusted ? colors.green("trusted") : colors.yellow("untrusted")}).`,
 );
 
 const agent = run();
