@@ -5,6 +5,13 @@ import { trigger } from "./ui/ui";
 import config, { getModel } from "./config";
 import colors from "./ui/colors";
 import { addModel } from "./ui/prompt";
+import { historyFile } from "./history";
+
+process.on("exit", () => {
+  if (historyFile) {
+    log(`Saved to ${historyFile}. Resume with /resume`);
+  }
+});
 
 if (config.models.length === 0) {
   log("No models are configured. Configure your first one now:");
