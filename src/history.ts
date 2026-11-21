@@ -10,6 +10,22 @@ let history: Message[] = [];
 
 export let historyFile: undefined | string = undefined;
 
+export function describeHistoryFile(file: string): {
+  name: string;
+  value: string;
+  timestamp: number;
+} {
+  const base = file.split("/").pop()!;
+  const parts = base.replace(".json", "").split("-");
+  const timestamp = Number(parts[1]);
+  const summary = parts.slice(2).join(" ");
+  return {
+    name: `${new Date(timestamp).toLocaleString()} - ${summary}`,
+    value: join(configDir, base),
+    timestamp,
+  };
+}
+
 export async function setHistoryFile() {
   if (historyFile) {
     return;

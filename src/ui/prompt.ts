@@ -1,6 +1,6 @@
 import { userInfo } from "os";
 import readline from "readline/promises";
-import { loadHistory } from "../history";
+import { loadHistory, describeHistoryFile } from "../history";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { configDir } from "../config";
@@ -138,20 +138,9 @@ export default async function prompt(): Promise<string | null> {
           await switchModel();
         }
       } else if (command === "/resume") {
-        const files = readdirSync(configDir);
-        const historyFiles = files
+        const historyFiles = readdirSync(configDir)
           .filter((f) => f.startsWith("history-") && f.endsWith(".json"))
-          .map((f) => {
-            const parts = f.replace(".json", "").split("-");
-            const timestamp = parts[1];
-            const summary = parts.slice(2).join(" ");
-            const date = new Date(Number(timestamp));
-            return {
-              name: `${date.toLocaleString()} - ${summary}`,
-              value: join(configDir, f),
-              timestamp: Number(timestamp),
-            };
-          })
+          .map(describeHistoryFile)
           .sort((a, b) => b.timestamp - a.timestamp);
         if (historyFiles.length === 0) {
           log("No history files found.");

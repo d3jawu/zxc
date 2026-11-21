@@ -5,11 +5,12 @@ import { trigger } from "./ui/ui";
 import config, { getModel } from "./config";
 import colors from "./ui/colors";
 import { addModel } from "./ui/prompt";
-import { historyFile } from "./history";
+import { historyFile, describeHistoryFile } from "./history";
 
 process.on("exit", () => {
   if (historyFile) {
-    log(`Saved to ${historyFile}. Resume with /resume`);
+    const { name } = describeHistoryFile(historyFile);
+    log(`Saved history: ${colors.blue(name)}. Resume with /resume`);
   }
 });
 
